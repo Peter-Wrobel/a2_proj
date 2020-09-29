@@ -40,15 +40,22 @@ int enc_l_pol;
 int enc_r_pol;
 
 double v_goal = 0.01;
+double last_p_v_term = 0;
 double p_v_term = 0;
 double d_v_term = 0;
 double l_pwm = 0;
 double r_pwm = 0;
+double last_l_enc = 0;
+double l_enc = 0;
+double last_r_enc = 0;
+double r_enc = 0;
 
 void simple_motor_command_handler(const lcm_recv_buf_t* rbuf,
                                   const char* channel,
                                   const simple_motor_command_t* msg,
                                   void* user);
+
+double get
 
 void calc_pd_v();
 
@@ -117,11 +124,24 @@ int main(int argc, char *argv[]){
             printf("timeout...\r");
         }
 		// define a timeout (for erroring out) and the delay time
-        calc_pd_v();
+        // calc_pd_v();
 		pd_controller();
 		lcm_handle_timeout(lcm, 1);
         publish_encoder_msg();
         rc_nanosleep(1E9 / 100); //handle at 10Hz
+		
+		last_l_enc = l_enc;
+		l_enc = double(enc_l_pol * rc_encoder_eqep_read(1));
+		last_r_enc = r_enc;
+		r_enc = double(enc_r_pol * rc_encoder_eqep_read(2));
+		
+		last_p_v_term = p_v_term;
+		delta_L = l_enc - last_l_enc;
+    	delta_R = r_enc - last_r_enc;
+    	delta_s = (delta_L+delta_R)*(2*M_PI*0.042)/(2.0*20.78);
+    	double t2 = 0.1;
+		p_v_term = v_goal - delta_s/t2;
+		d_v_term = (p_v_term - last_p_v_term)/t2;
 	}
     rc_motor_cleanup();
     rc_encoder_eqep_cleanup();
