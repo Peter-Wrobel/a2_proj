@@ -39,10 +39,20 @@ int mot_r_pol;
 int enc_l_pol;
 int enc_r_pol;
 
+double v_goal = 0.5;
+double p_v_term = 0;
+double d_v_term = 0;
+double l_pwm = 0;
+double r_pwm = 0;
+
 void simple_motor_command_handler(const lcm_recv_buf_t* rbuf,
                                   const char* channel,
                                   const simple_motor_command_t* msg,
                                   void* user);
+
+void calc_pd_v();
+
+void pd_controller();
 
 /*******************************************************************************
 * int main() 
@@ -86,7 +96,7 @@ int main(int argc, char *argv[]){
 
     lcm = lcm_create("udpm://239.255.76.67:7667?ttl=1");
 
-    simple_motor_command_t_subscribe(lcm, "MBOT_MOTOR_COMMAND_SIMPLE", &simple_motor_command_handler, NULL);
+    // simple_motor_command_t_subscribe(lcm, "MBOT_MOTOR_COMMAND_SIMPLE", &simple_motor_command_handler, NULL);
     // make PID file to indicate your project is running
 	// due to the check made on the call to rc_kill_existing_process() above
 	// we can be fairly confident there is no PID file already and we can
@@ -108,7 +118,9 @@ int main(int argc, char *argv[]){
             printf("timeout...\r");
         }
 		// define a timeout (for erroring out) and the delay time
-        lcm_handle_timeout(lcm, 1);
+        calc_pd_v();
+		pd_controller();
+		lcm_handle_timeout(lcm, 1);
         publish_encoder_msg();
         rc_nanosleep(1E9 / 100); //handle at 10Hz
 	}
@@ -135,6 +147,50 @@ int main(int argc, char *argv[]){
 /// the sign of the velocity should indicate direction, and angular velocity 
 //  indicates turning rate. 
 //////////////////////////////////////////////////////////////////////////////
+
+void calc_pd_v(){
+	mbot_encoder_t encoder1;
+    encoder1.utime = rc_nanos_since_epoch();
+    encoder1.left_delta = 0;
+    encoder1.right_delta = 0;
+    encoder1.leftticks = enc_l_pol * rc_encoder_eqep_read(1);
+    encoder1.rightticks = enc_r_pol * rc_encoder_eqep_read(2);
+    
+    mbot_encoder_t encoder2;
+    encoder2.utime = rc_nanos_since_epoch();
+    encoder2.left_delta = 0;
+    encoder2.right_delta = 0;
+    encoder2.leftticks = enc_l_pol * rc_encoder_eqep_read(1);
+    encoder2.rightticks = enc_r_pol * rc_encoder_eqep_read(2);
+    double delta_L = (double) (encoder2.leftticks - encoder1.leftticks);
+    double delta_R = (double) (encoder2.rightticks - encoder1.rightticks);
+    double delta_s = (delta_L+delta_R)*(2*M_PI*0.042)/(2.0*20.78);A
+    double t1 = (double) (encoder2.utime-encoder1.utime)*0.000001;
+	last_p_v_term = v_goal - delta_s/t1;
+
+	mbot_encoder_t encorder3;
+    encoder3.utime = rc_nanos_since_epoch();
+    encoder3.left_delta = 0;
+    encoder3.right_delta = 0;
+    encoder3.leftticks = enc_l_pol * rc_encoder_eqep_read(1);
+    encoder3.rightticks = enc_r_pol * rc_encoder_eqep_read(2);
+    
+	mbot_encoder_t encorder4;
+    encoder4.utime = rc_nanos_since_epoch();
+    encoder4.left_delta = 0;
+    encoder4.right_delta = 0;
+    encoder4.leftticks = enc_l_pol * rc_encoder_eqep_read(1);
+    encoder4.rightticks = enc_r_pol * rc_encoder_eqep_read(2);
+    delta_L = (double) (encoder4.leftticks - encoder3.leftticks);
+    delta_R = (double) (encoder4.rightticks - encoder3.rightticks);
+    delta_s = (delta_L+delta_R)*(2*M_PI*0.042)/(2.0*20.78);
+    double t2 = (double) (encoder4.utime-encoder3.utime)*0.000001;
+	p_v_term = v_goal - delta_s/t2;
+	
+	double t_e = (double) (encoder4.utime + encoder3.utime - encoder2.utime - encoder1.utime)*0.000001/2.0;
+	d_v_term = (p_v_term-last_p_v_term)/t_e;
+}
+
 void simple_motor_command_handler(const lcm_recv_buf_t* rbuf,
                                   const char* channel,
                                   const simple_motor_command_t* msg,
@@ -142,6 +198,16 @@ void simple_motor_command_handler(const lcm_recv_buf_t* rbuf,
     watchdog_timer = 0.0;
     rc_motor_set(1, 0.15 * (msg->forward_velocity + msg->angular_velocity));
     rc_motor_set(2, 0.15 * (msg->forward_velocity - msg->angular_velocity));
+}
+
+void pd_controller(){
+	watchdog_timer = 0.0;
+	k_p = 10.0;
+	k_d = 1.0;
+	l_pwm = l_pwm + k_p*p_v_term + k_d*d_v_term;
+	r_pwm = r_pwm + k_p*p_v_term + k_d*d_v_term;
+	rc_motor_set(1, l_pwm);
+	rc_motor_set(2, r_pwm);
 }
 
 /*******************************************************************************
@@ -155,7 +221,7 @@ void publish_encoder_msg(){
     /// TODO: update this fuction by calculating and printing the forward speeds(v) 
     ///     and angular speeds (w).
     //////////////////////////////////////////////////////////////////////////////
-    static mbot_encoder_t last_encoder;
+    mbot_encoder_t last_encoder;
     last_encoder.utime = rc_nanos_since_epoch();
     last_encoder.left_delta = 0;
     last_encoder.right_delta = 0;
@@ -175,8 +241,6 @@ void publish_encoder_msg(){
     double t = (double) (encoder_msg.utime-last_encoder.utime)*0.000001;
     printf(" ENC: %lld | %lld  - v: %f | w: %f \r", encoder_msg.leftticks, encoder_msg.rightticks, delta_s/t, delta_theta/t);
     mbot_encoder_t_publish(lcm, MBOT_ENCODER_CHANNEL, &encoder_msg);
-
-    last_encoder = encoder_msg;
 }
 
 void print_answers()
