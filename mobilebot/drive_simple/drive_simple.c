@@ -39,7 +39,7 @@ int mot_r_pol;
 int enc_l_pol;
 int enc_r_pol;
 
-double v_goal = 0.5;
+double v_goal = 0.01;
 double p_v_term = 0;
 double d_v_term = 0;
 double l_pwm = 0;
@@ -66,7 +66,6 @@ int main(int argc, char *argv[]){
         return 0;
     }
 
-
     mot_l_pol = atoi(argv[1]);
     mot_r_pol = atoi(argv[2]);
     enc_l_pol = atoi(argv[3]);
@@ -83,13 +82,13 @@ int main(int argc, char *argv[]){
 	// make sure another instance isn't running
     if(rc_kill_existing_process(2.0)<-2) return -1;
 
-	// start signal handler so we can exit cleanly
+	// itart signal handler so we can exit cleanly
     if(rc_enable_signal_handler()==-1){
                 fprintf(stderr,"ERROR: failed to start signal handler\n");
                 return -1;
     }
 
-	if(rc_motor_init()<0){
+    if(rc_motor_init()<0){
         fprintf(stderr,"ERROR: failed to initialze motors\n");
         return -1;
     }
@@ -164,18 +163,18 @@ void calc_pd_v(){
     encoder2.rightticks = enc_r_pol * rc_encoder_eqep_read(2);
     double delta_L = (double) (encoder2.leftticks - encoder1.leftticks);
     double delta_R = (double) (encoder2.rightticks - encoder1.rightticks);
-    double delta_s = (delta_L+delta_R)*(2*M_PI*0.042)/(2.0*20.78);A
+    double delta_s = (delta_L+delta_R)*(2*M_PI*0.042)/(2.0*20.78);
     double t1 = (double) (encoder2.utime-encoder1.utime)*0.000001;
-	last_p_v_term = v_goal - delta_s/t1;
+	double last_p_v_term = v_goal - delta_s/t1;
 
-	mbot_encoder_t encorder3;
+	mbot_encoder_t encoder3;
     encoder3.utime = rc_nanos_since_epoch();
     encoder3.left_delta = 0;
     encoder3.right_delta = 0;
     encoder3.leftticks = enc_l_pol * rc_encoder_eqep_read(1);
     encoder3.rightticks = enc_r_pol * rc_encoder_eqep_read(2);
     
-	mbot_encoder_t encorder4;
+	mbot_encoder_t encoder4;
     encoder4.utime = rc_nanos_since_epoch();
     encoder4.left_delta = 0;
     encoder4.right_delta = 0;
@@ -202,12 +201,14 @@ void simple_motor_command_handler(const lcm_recv_buf_t* rbuf,
 
 void pd_controller(){
 	watchdog_timer = 0.0;
-	k_p = 10.0;
-	k_d = 1.0;
+	double k_p = 0.1;
+	double k_d = 0.0;
+    printf("e: %f\n", p_v_term);
+    printf("e_dot: %f\n\n", d_v_term);
 	l_pwm = l_pwm + k_p*p_v_term + k_d*d_v_term;
 	r_pwm = r_pwm + k_p*p_v_term + k_d*d_v_term;
-	rc_motor_set(1, l_pwm);
-	rc_motor_set(2, r_pwm);
+	rc_motor_set(1, mot_l_pol * l_pwm);
+	rc_motor_set(2, mot_r_pol * r_pwm);
 }
 
 /*******************************************************************************
