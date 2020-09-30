@@ -35,7 +35,9 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     screen.fill([0,0,0])
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image = image.swapaxes(0,1)
-    image = cv2.flip(image, -1)
+    # image = cv2.flip(image, -1)
+    image = image[:,:,0]
+    np.less(image, 10, out=image, dtype=np.uint8)
     image = pygame.surfarray.make_surface(image)
     screen.blit(image, (0,0))
     pygame.display.update()
