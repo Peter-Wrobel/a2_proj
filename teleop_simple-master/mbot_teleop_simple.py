@@ -38,6 +38,16 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     # image = cv2.flip(image, -1)
     image = image[:,:,0]
     np.less(image, 10, out=image, dtype=np.uint8)
+    # save image
+    filename("blue_thresholded.txt")
+    outfile = open(filename, 'w')
+    outfile.truncate(0)
+    for row in image.shape[0]:
+        for col in image.shape[1]:
+            outfile.write(str(image[row, col]), "\t")
+        outfile.write("\n")
+    outfile.close()
+
     image = pygame.surfarray.make_surface(image)
     screen.blit(image, (0,0))
     pygame.display.update()
