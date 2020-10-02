@@ -39,23 +39,29 @@ int mot_r_pol;
 int enc_l_pol;
 int enc_r_pol;
 
-double v_goal = 0.01;
-double last_p_v_term = 0;
-double p_v_term = 0;
-double d_v_term = 0;
-double l_pwm = 0;
-double r_pwm = 0;
-double last_l_enc = 0;
-double l_enc = 0;
-double last_r_enc = 0;
-double r_enc = 0;
+float v_goal = 0.1;
+float last_p_v_term = 0;
+float p_v_term = 0;
+float d_v_term = 0;
+float l_pwm = 0;
+float r_pwm = 0;
+float last_l_enc = 0;
+float l_enc = 0;
+float last_r_enc = 0;
+float r_enc = 0;
+
+float vel = 0;
+float ang = 0;
+
+int64_t t_prev = 0;
+int64_t t_prev_v = 0;
+int64_t left_prev = 0;
+int64_t right_prev = 0;
 
 void simple_motor_command_handler(const lcm_recv_buf_t* rbuf,
                                   const char* channel,
                                   const simple_motor_command_t* msg,
                                   void* user);
-
-double get
 
 void calc_pd_v();
 
@@ -115,7 +121,8 @@ int main(int argc, char *argv[]){
     
     watchdog_timer = 0.0;
     printf("Running...\n");
-	while(rc_get_state()==RUNNING){
+	// while(rc_get_state()==RUNNING){
+    for(int i = 0; i < 50; i++) {
         watchdog_timer += 0.01;
         if(watchdog_timer >= 0.25)
         {
@@ -128,20 +135,21 @@ int main(int argc, char *argv[]){
 		pd_controller();
 		lcm_handle_timeout(lcm, 1);
         publish_encoder_msg();
-        rc_nanosleep(1E9 / 100); //handle at 10Hz
+        rc_nanosleep(1E9 / 10); //handle at 10Hz
 		
-		last_l_enc = l_enc;
-		l_enc = double(enc_l_pol * rc_encoder_eqep_read(1));
-		last_r_enc = r_enc;
-		r_enc = double(enc_r_pol * rc_encoder_eqep_read(2));
+		// last_l_enc = l_enc;
+		// l_enc = (float) (enc_l_pol * rc_encoder_eqep_read(1));
+		// last_r_enc = r_enc;
+		// r_enc = (float) (enc_r_pol * rc_encoder_eqep_read(2));
 		
 		last_p_v_term = p_v_term;
-		delta_L = l_enc - last_l_enc;
-    	delta_R = r_enc - last_r_enc;
-    	delta_s = (delta_L+delta_R)*(2*M_PI*0.042)/(2.0*20.78);
-    	double t2 = 0.1;
-		p_v_term = v_goal - delta_s/t2;
-		d_v_term = (p_v_term - last_p_v_term)/t2;
+		// float delta_L = l_enc - last_l_enc;
+    	// float delta_R = r_enc - last_r_enc;
+    	// float delta_s = (delta_L+delta_R)*(2*M_PI*0.042)/(2.0*20.78);
+    	// trouble maker
+        float t = (float) (t_prev - t_prev_v) / 1E9;
+		p_v_term = v_goal - vel;
+		d_v_term = (p_v_term - last_p_v_term)/t;
 	}
     rc_motor_cleanup();
     rc_encoder_eqep_cleanup();
@@ -183,7 +191,7 @@ void calc_pd_v(){
     encoder2.rightticks = enc_r_pol * rc_encoder_eqep_read(2);
     double delta_L = (double) (encoder2.leftticks - encoder1.leftticks);
     double delta_R = (double) (encoder2.rightticks - encoder1.rightticks);
-    double delta_s = (delta_L+delta_R)*(2*M_PI*0.042)/(2.0*20.78);
+    double delta_s = (delta_L+delta_R)*(2*M_PI*0.042)/(2.0*20*78);
     double t1 = (double) (encoder2.utime-encoder1.utime)*0.000001;
 	double last_p_v_term = v_goal - delta_s/t1;
 
@@ -202,7 +210,7 @@ void calc_pd_v(){
     encoder4.rightticks = enc_r_pol * rc_encoder_eqep_read(2);
     delta_L = (double) (encoder4.leftticks - encoder3.leftticks);
     delta_R = (double) (encoder4.rightticks - encoder3.rightticks);
-    delta_s = (delta_L+delta_R)*(2*M_PI*0.042)/(2.0*20.78);
+    delta_s = (delta_L+delta_R)*(2*M_PI*0.042)/(2.0*20*78);
     double t2 = (double) (encoder4.utime-encoder3.utime)*0.000001;
 	p_v_term = v_goal - delta_s/t2;
 	
@@ -221,14 +229,14 @@ void simple_motor_command_handler(const lcm_recv_buf_t* rbuf,
 
 void pd_controller(){
 	watchdog_timer = 0.0;
-	double k_p = 0.1;
-	double k_d = 0.0;
-    printf("e: %f\n", p_v_term);
-    printf("e_dot: %f\n\n", d_v_term);
+	float k_p = 1.0;
+	float k_d = 0.1;
+    // printf("e: %f\n", p_v_term);
+    // printf("e_dot: %f\n\n", d_v_term);
 	l_pwm = l_pwm + k_p*p_v_term + k_d*d_v_term;
 	r_pwm = r_pwm + k_p*p_v_term + k_d*d_v_term;
-	rc_motor_set(1, mot_l_pol * l_pwm);
-	rc_motor_set(2, mot_r_pol * r_pwm);
+	rc_motor_set(1, l_pwm);
+	rc_motor_set(2, r_pwm);
 }
 
 /*******************************************************************************
@@ -242,25 +250,29 @@ void publish_encoder_msg(){
     /// TODO: update this fuction by calculating and printing the forward speeds(v) 
     ///     and angular speeds (w).
     //////////////////////////////////////////////////////////////////////////////
-    mbot_encoder_t last_encoder;
-    last_encoder.utime = rc_nanos_since_epoch();
-    last_encoder.left_delta = 0;
-    last_encoder.right_delta = 0;
-    last_encoder.leftticks = enc_l_pol * rc_encoder_eqep_read(1);
-    last_encoder.rightticks = enc_r_pol * rc_encoder_eqep_read(2);
     
     mbot_encoder_t encoder_msg;
     encoder_msg.utime = rc_nanos_since_epoch();
-    encoder_msg.left_delta = 0;
-    encoder_msg.right_delta = 0;
-    encoder_msg.leftticks = enc_l_pol * rc_encoder_eqep_read(1);
-    encoder_msg.rightticks = enc_r_pol * rc_encoder_eqep_read(2);
-    double delta_L = (double) (encoder_msg.leftticks - last_encoder.leftticks);
-    double delta_R = (double) (encoder_msg.rightticks - last_encoder.rightticks);
-    double delta_s = (delta_L+delta_R)*(2*M_PI*0.042)/(2.0*20.78);
-    double delta_theta = (-delta_L+delta_R)*(2*M_PI*0.042)/(0.11*20.78);
-    double t = (double) (encoder_msg.utime-last_encoder.utime)*0.000001;
-    printf(" ENC: %lld | %lld  - v: %f | w: %f \r", encoder_msg.leftticks, encoder_msg.rightticks, delta_s/t, delta_theta/t);
+    t_prev_v = t_prev;
+
+    int64_t curr_left = enc_l_pol * rc_encoder_eqep_read(1);
+    int64_t curr_right = enc_r_pol * rc_encoder_eqep_read(2);
+   
+    encoder_msg.left_delta = curr_left - left_prev;
+    encoder_msg.right_delta = curr_right - right_prev;
+    encoder_msg.leftticks = curr_left;
+    encoder_msg.rightticks = curr_right;
+    
+    float t_passed = (float) (encoder_msg.utime - t_prev) / 1E9;
+
+    vel = (encoder_msg.left_delta+encoder_msg.right_delta)*(2*M_PI*0.042)/(2.0*20*78*t_passed);
+    ang = (-encoder_msg.left_delta+encoder_msg.right_delta)*(2*M_PI*0.042)/(0.11*20*78*t_passed);
+    printf(" ENC: %lld | %lld  - v: %f | w: %f | p-term: %f | l-pwm: %f | - t_pass: %f | t: %lld\n", encoder_msg.leftticks, encoder_msg.rightticks, vel, ang, p_v_term, l_pwm, t_passed, encoder_msg.utime);
+
+    t_prev = encoder_msg.utime;
+    left_prev = curr_left;
+    right_prev = curr_right;
+
     mbot_encoder_t_publish(lcm, MBOT_ENCODER_CHANNEL, &encoder_msg);
 }
 
