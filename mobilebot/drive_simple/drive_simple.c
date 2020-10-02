@@ -229,7 +229,7 @@ void simple_motor_command_handler(const lcm_recv_buf_t* rbuf,
 
 void pd_controller(){
 	watchdog_timer = 0.0;
-	float k_p = 1.0;
+	float k_p = 0.5;
 	float k_d = 0.1;
     // printf("e: %f\n", p_v_term);
     // printf("e_dot: %f\n\n", d_v_term);
