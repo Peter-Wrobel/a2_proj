@@ -57,7 +57,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     
     start = time.process_time()
     print(image.shape)
-    found, center = detector.search_stopline(image)
+    found, center = detector.search_post(image)
     if found:
         #print(image.shape, "\t&&\t", type(image))
         #print(frame.array.shape, "\t&&\t", type(frame.array))
@@ -65,10 +65,10 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         image = cv2.circle(image, center, 15, (0,0,255), -1)
     print("time elapsed:", time.process_time() - start)
 
-    image = cv2.circle(image,(190,280),15,(0,255,0),-1)
-    image = cv2.circle(image,(190,440),15,(0,255,0),-1)
-    image = cv2.circle(image,(490,280),15,(0,255,0),-1)
-    image = cv2.circle(image,(490,440),15,(0,255,0),-1)
+    image = cv2.circle(image,(460,220),15,(0,255,0),-1)
+    image = cv2.circle(image,(460,400),15,(0,255,0),-1)
+    image = cv2.circle(image,(620,220),15,(0,255,0),-1)
+    image = cv2.circle(image,(620,400),15,(0,255,0),-1)
     
     #image = image[:,:,2]
     #image = cv2.circle(image, (1,400), 15, (255, 0, 0), -1)

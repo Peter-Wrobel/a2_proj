@@ -50,12 +50,37 @@ class Tape_Detector:
         """
         returns: bool if found, center of post
         """
-        image = image[:,:,2]
-        np.less(image, 10, out=image, dtype=np.uint8)
+        img = image[:,:,2].copy()
+        np.less(img, self.thresh, out=img, dtype=np.uint8)
         
         # interested search region must be tuned
-        activation = np.sum(image[80:400,480:640])
+        # range to search in -> activation = np.sum(image[260:400,180:460])
         # activation threshold needs tuning as well
-        #if activation > 100:
-            # found post
-        pass
+        
+        # performing convolution with a kernel that is diamond-shaped
+        activations = np.zeros((8,10))
+        for i, col in enumerate(range(460, 620, 20)):
+            # min = 0
+            # max = 479
+            for j, row in enumerate(range(220, 400, 30)):
+                print("row:", row,"\tcol:", col)
+                if img[row+10,col+10]+img[row+15,col+10]+img[row+20,col+10] >= 2:
+                    # 2 of 3 points were blue
+                    activations[j, i] = 1
+        
+        # if np.sum(activations) > 4:
+        print("ACTIVATIONS:\n", activations)
+        for col in range(activations.shape[1]):
+            consecutive = 0
+            for row in range(activations.shape[0]):
+                if activations[row, col]:
+                    # 2 of 3 points were blue
+                    print("counted:", row, "\t", col)
+                    consecutive += 1
+                else:
+                    consecutive = 0
+                if consecutive > 4:
+                    return True, ((col-3)*30 + 460, row*20 + 220)
+            
+
+        return False, None
