@@ -9,6 +9,7 @@ import sys
 sys.path.append("lcmtypes")
 import lcm
 from lcmtypes import mbot_motor_pwm_t
+import blue_tape_detectors as btd
 FWD_PWM_CMD = 0.3
 TURN_PWM_CMD = 0.3
 flip_h = 0
@@ -23,6 +24,9 @@ camera.resolution = (640, 480)
 camera.framerate = 32
 rawCapture = PiRGBArray(camera, size=(640, 480))
 time.sleep(0.5)
+
+detector = btd.Tape_Detector()
+
 for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     image = frame.array
     if (flip_h == 1 & flip_v == 0):
@@ -35,18 +39,23 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     screen.fill([0,0,0])
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image = image.swapaxes(0,1)
-    # image = cv2.flip(image, -1)
+    """# image = cv2.flip(image, -1)
     image = image[:,:,0]
     np.less(image, 10, out=image, dtype=np.uint8)
     # save image
-    filename("blue_thresholded.txt")
+    filename = "blue_thresholded.txt"
     outfile = open(filename, 'w')
     outfile.truncate(0)
     for row in image.shape[0]:
         for col in image.shape[1]:
-            outfile.write(str(image[row, col]), "\t")
+            outfile.write(str(image[col, row]), "\t")
         outfile.write("\n")
-    outfile.close()
+    outfile.close()"""
+
+    found, center = detector.search_stopline(image)
+    if found:
+        image = cv2.circle(image, center, 15, (0,0,255), -1)
+
 
     image = pygame.surfarray.make_surface(image)
     screen.blit(image, (0,0))
