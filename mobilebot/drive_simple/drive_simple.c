@@ -13,6 +13,7 @@
 #include <getopt.h>
 
 #include <lcm/lcm.h>
+#include "../lcmtypes/stop_command_t.h"
 #include "../lcmtypes/mbot_encoder_t.h"
 #include "../lcmtypes/simple_motor_command_t.h"
 
@@ -39,6 +40,10 @@ int mot_r_pol;
 int enc_l_pol;
 int enc_r_pol;
 
+int mode = 0;
+// 0: move forward
+// 1: stop
+
 float v_goal = 0.1;
 float last_p_v_term = 0;
 float p_v_term = 0;
@@ -59,7 +64,14 @@ void simple_motor_command_handler(const lcm_recv_buf_t* rbuf,
                                   const simple_motor_command_t* msg,
                                   void* user);
 
+void stop_command_handler(const lcm_recv_buf_t* rbuf,
+                          const char* channel,
+                          const stop_command_t* msg,
+                          void* user);
+
 void pd_controller();
+
+void stop_controller();
 
 /*******************************************************************************
 * int main() 
@@ -115,9 +127,13 @@ int main(int argc, char *argv[]){
     
     watchdog_timer = 0.0;
     printf("Running...\n");
+	stop_command_t_subscribe(lcm, "STOP", &stop_command_handler, NULL);
 	// while(rc_get_state()==RUNNING){
     for(int i = 0; i < 50; i++) {
         watchdog_timer += 0.01;
+		if (i > 30) {
+			mode = 1;
+		}
         if(watchdog_timer >= 0.25)
         {
             rc_motor_set(1,0.0);
@@ -125,7 +141,14 @@ int main(int argc, char *argv[]){
             printf("timeout...\r");
         }
 		// define a timeout (for erroring out) and the delay time
-		pd_controller();
+		if (mode == 0) {
+			pd_controller();
+		}
+		else if (mode == 1) {
+			stop_controller();
+		}
+		rc_motor_set(1, l_pwm);
+		rc_motor_set(2, r_pwm);
 		lcm_handle_timeout(lcm, 1);
         publish_encoder_msg();
         rc_nanosleep(1E9 / 10); //handle at 10Hz
@@ -167,7 +190,18 @@ void simple_motor_command_handler(const lcm_recv_buf_t* rbuf,
     rc_motor_set(2, 0.15 * (msg->forward_velocity - msg->angular_velocity));
 }
 
-void pd_controller(){
+
+void stop_command_handler(const lcm_recv_buf_t* rbuf,
+                          const char* channel,
+                          const stop_command_t* msg,
+                          void* user){
+	watchdog_timer = 0.0;
+	if (msg->stop == 1) {
+		mode = 1;
+	}
+}
+
+void pd_controller() {
 	watchdog_timer = 0.0;
 	float k_p = 0.5;
 	float k_d = 0.1;
@@ -175,8 +209,13 @@ void pd_controller(){
     // printf("e_dot: %f\n\n", d_v_term);
 	l_pwm = l_pwm + k_p*p_v_term + k_d*d_v_term;
 	r_pwm = r_pwm + k_p*p_v_term + k_d*d_v_term;
-	rc_motor_set(1, l_pwm);
-	rc_motor_set(2, r_pwm);
+}
+
+void stop_controller() {
+	watchdog_timer = 0.0;
+	float k = 1.0;
+	l_pwm = l_pwm - k*v_goal*v_goal;
+	r_pwm = r_pwm - k*v_goal*v_goal;
 }
 
 /*******************************************************************************

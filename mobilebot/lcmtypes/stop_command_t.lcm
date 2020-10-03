@@ -1,4 +1,4 @@
-struct stop_command
+struct stop_command_t
 {
     // stop is the signal to stop. If stop = 1, then I will stop once I reeceived the signal by setting the goal velocity to 0
     int8_t stop;
