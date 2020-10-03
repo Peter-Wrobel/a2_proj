@@ -37,8 +37,11 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
         image = cv2.flip(image, -1)
     
     screen.fill([0,0,0])
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    image = image.swapaxes(0,1)
+    image = cv2.flip(image, 1)
+    #image = cv2.circle(image, (1,400), 15, (0,0,255), -1)
+    
+    #image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    #image = image.swapaxes(0,1)
     """# image = cv2.flip(image, -1)
     image = image[:,:,0]
     np.less(image, 10, out=image, dtype=np.uint8)
@@ -51,12 +54,27 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
             outfile.write(str(image[col, row]), "\t")
         outfile.write("\n")
     outfile.close()"""
-
+    
+    start = time.process_time()
+    print(image.shape)
     found, center = detector.search_stopline(image)
     if found:
+        #print(image.shape, "\t&&\t", type(image))
+        #print(frame.array.shape, "\t&&\t", type(frame.array))
+        print("CENTER:", center)
         image = cv2.circle(image, center, 15, (0,0,255), -1)
+    print("time elapsed:", time.process_time() - start)
 
-
+    image = cv2.circle(image,(190,280),15,(0,255,0),-1)
+    image = cv2.circle(image,(190,440),15,(0,255,0),-1)
+    image = cv2.circle(image,(490,280),15,(0,255,0),-1)
+    image = cv2.circle(image,(490,440),15,(0,255,0),-1)
+    
+    #image = image[:,:,2]
+    #image = cv2.circle(image, (1,400), 15, (255, 0, 0), -1)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    image = image.swapaxes(0,1)
+    print(image.shape)
     image = pygame.surfarray.make_surface(image)
     screen.blit(image, (0,0))
     pygame.display.update()
