@@ -80,7 +80,7 @@ class Tape_Detector:
                 else:
                     consecutive = 0
                 if consecutive > 4:
-                    return True, ((col-3)*30 + 460, row*20 + 220)
+                    return True, ((col+1)*20 + 460, (row-2)*30 + 220)
             
 
         return False, None
