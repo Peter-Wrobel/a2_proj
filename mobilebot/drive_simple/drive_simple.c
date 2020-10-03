@@ -13,7 +13,9 @@
 #include <getopt.h>
 
 #include <lcm/lcm.h>
-#include "../lcmtypes/stop_command_t.h"
+#include "../lcmtypes/steer_command_t.h"
+#include "../lcmtypes/turn_command_t.h"
+#include "../lcmtypes/state_t.h"
 #include "../lcmtypes/mbot_encoder_t.h"
 #include "../lcmtypes/simple_motor_command_t.h"
 
@@ -40,16 +42,26 @@ int mot_r_pol;
 int enc_l_pol;
 int enc_r_pol;
 
-int mode = 0;
+int8_t mode = 0;
 // 0: move forward
 // 1: stop
+// 2: turn
 
+// Task I: v control
 float v_goal = 0.1;
 float last_p_v_term = 0;
 float p_v_term = 0;
 float d_v_term = 0;
 float l_pwm = 0;
 float r_pwm = 0;
+
+// Task II: w control
+float p_w_term = 0;
+float d_w_term = 0;
+
+// Task IV: turn control
+float p_turn = 0;
+float d_turn = 0;
 
 float vel = 0;
 float ang = 0;
@@ -64,14 +76,22 @@ void simple_motor_command_handler(const lcm_recv_buf_t* rbuf,
                                   const simple_motor_command_t* msg,
                                   void* user);
 
-void stop_command_handler(const lcm_recv_buf_t* rbuf,
+void state_handler(const lcm_recv_buf_t* rbuf,
+                   const char* channel,
+                   const state_t* msg,
+                   void* user);
+
+void steer_command_handler(const lcm_recv_buf_t* rbuf,
                           const char* channel,
                           const stop_command_t* msg,
                           void* user);
 
+
 void pd_controller();
 
 void stop_controller();
+
+void turn_controller();
 
 /*******************************************************************************
 * int main() 
@@ -127,7 +147,9 @@ int main(int argc, char *argv[]){
     
     watchdog_timer = 0.0;
     printf("Running...\n");
-	stop_command_t_subscribe(lcm, "STOP", &stop_command_handler, NULL);
+	state_t_subscribe(lcm, "STATE", &state_handler, NULL);
+	steer_command_t_subscribe(lcm, "STEER", &steer_command_handler, NULL);
+	turn_command_t_subscribe(lcm, "TURN", &turn_command_handler, NULL);
 	// while(rc_get_state()==RUNNING){
     for(int i = 0; i < 50; i++) {
         watchdog_timer += 0.01;
@@ -146,6 +168,16 @@ int main(int argc, char *argv[]){
 		}
 		else if (mode == 1) {
 			stop_controller();
+			if (vel < 0.0000001) {
+				mode = 2;
+				state_t data = {
+					.state = 2
+				};
+				state_t_publish(lcm, "STATE", &data);
+			}
+		}
+		else if (mode == 2) {
+			turn_controller();
 		}
 		rc_motor_set(1, l_pwm);
 		rc_motor_set(2, r_pwm);
@@ -184,31 +216,44 @@ int main(int argc, char *argv[]){
 void simple_motor_command_handler(const lcm_recv_buf_t* rbuf,
                                   const char* channel,
                                   const simple_motor_command_t* msg,
-                                  void* user){
+                                  void* user) {
     watchdog_timer = 0.0;
     rc_motor_set(1, 0.15 * (msg->forward_velocity + msg->angular_velocity));
     rc_motor_set(2, 0.15 * (msg->forward_velocity - msg->angular_velocity));
 }
 
 
-void stop_command_handler(const lcm_recv_buf_t* rbuf,
-                          const char* channel,
-                          const stop_command_t* msg,
-                          void* user){
+void state_handler(const lcm_recv_buf_t* rbuf,
+                   const char* channel,
+                   const state_t* msg,
+                   void* user) {
 	watchdog_timer = 0.0;
-	if (msg->stop == 1) {
-		mode = 1;
-	}
+	mode = msg->state;
 }
+
+void steer_command_handler(const lcm_recv_buf_t* rbuf,
+                           const char* channel,
+                           const stop_command_t* msg,
+                           void* user) {
+	watchdog_timer = 0.0;
+	p_w_term = msg->p_term;
+	d_w_term = msg->d_term;
+}
+
 
 void pd_controller() {
 	watchdog_timer = 0.0;
 	float k_p = 0.5;
 	float k_d = 0.1;
+	float k_p_w = 0.01;
+	float k_d_w = 0.001;
     // printf("e: %f\n", p_v_term);
     // printf("e_dot: %f\n\n", d_v_term);
 	l_pwm = l_pwm + k_p*p_v_term + k_d*d_v_term;
 	r_pwm = r_pwm + k_p*p_v_term + k_d*d_v_term;
+	
+	l_pwm = l_pwm + k_p_w*p_w_term + k_d_w*d_w_term;
+	r_pwm = r_pwm - k_p_w*p_w_term - k_d_w*d_w_term;
 }
 
 void stop_controller() {
@@ -216,6 +261,19 @@ void stop_controller() {
 	float k = 1.0;
 	l_pwm = l_pwm - k*v_goal*v_goal;
 	r_pwm = r_pwm - k*v_goal*v_goal;
+}
+
+void turn_controller() {
+	watchdog_timer = 0.0;
+	float k_p = 0.5;
+	float k_d = 0.1;
+	float k_p_turn = 0.01;
+	float k_d_turn = 0.001;
+	l_pwm = l_pwm + k_p*p_v_term + k_d*d_v_term;
+	r_pwm = r_pwm + k_p*p_v_term + k_d*d_v_term;
+	
+	l_pwm = l_pwm + k_p*p_turn + k_d*d_turn;
+	l_pwm = l_pwm - k_p*p_turn - k_d*d_turn;
 }
 
 /*******************************************************************************
@@ -254,4 +312,3 @@ void publish_encoder_msg(){
 
     mbot_encoder_t_publish(lcm, MBOT_ENCODER_CHANNEL, &encoder_msg);
 }
-

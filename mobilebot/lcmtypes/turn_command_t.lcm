@@ -1,0 +1,6 @@
+struct turn_command_t
+{
+	// if the center of cross is on the right of the center of images, p_term is positive
+	float p_term;
+	float d_term;
+}

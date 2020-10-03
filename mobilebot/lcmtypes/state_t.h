@@ -8,44 +8,44 @@
 #include <lcm/lcm_coretypes.h>
 #include <lcm/lcm.h>
 
-#ifndef _stop_command_t_h
-#define _stop_command_t_h
+#ifndef _state_t_h
+#define _state_t_h
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct _stop_command_t stop_command_t;
-struct _stop_command_t
+typedef struct _state_t state_t;
+struct _state_t
 {
-    int8_t     stop;
+    int8_t     state;
 };
 
 /**
- * Create a deep copy of a stop_command_t.
- * When no longer needed, destroy it with stop_command_t_destroy()
+ * Create a deep copy of a state_t.
+ * When no longer needed, destroy it with state_t_destroy()
  */
-stop_command_t* stop_command_t_copy(const stop_command_t* to_copy);
+state_t* state_t_copy(const state_t* to_copy);
 
 /**
- * Destroy an instance of stop_command_t created by stop_command_t_copy()
+ * Destroy an instance of state_t created by state_t_copy()
  */
-void stop_command_t_destroy(stop_command_t* to_destroy);
+void state_t_destroy(state_t* to_destroy);
 
 /**
  * Identifies a single subscription.  This is an opaque data type.
  */
-typedef struct _stop_command_t_subscription_t stop_command_t_subscription_t;
+typedef struct _state_t_subscription_t state_t_subscription_t;
 
 /**
  * Prototype for a callback function invoked when a message of type
- * stop_command_t is received.
+ * state_t is received.
  */
-typedef void(*stop_command_t_handler_t)(const lcm_recv_buf_t *rbuf,
-             const char *channel, const stop_command_t *msg, void *userdata);
+typedef void(*state_t_handler_t)(const lcm_recv_buf_t *rbuf,
+             const char *channel, const state_t *msg, void *userdata);
 
 /**
- * Publish a message of type stop_command_t using LCM.
+ * Publish a message of type state_t using LCM.
  *
  * @param lcm The LCM instance to publish with.
  * @param channel The channel to publish on.
@@ -53,10 +53,10 @@ typedef void(*stop_command_t_handler_t)(const lcm_recv_buf_t *rbuf,
  * @return 0 on success, <0 on error.  Success means LCM has transferred
  * responsibility of the message data to the OS.
  */
-int stop_command_t_publish(lcm_t *lcm, const char *channel, const stop_command_t *msg);
+int state_t_publish(lcm_t *lcm, const char *channel, const state_t *msg);
 
 /**
- * Subscribe to messages of type stop_command_t using LCM.
+ * Subscribe to messages of type state_t using LCM.
  *
  * @param lcm The LCM instance to subscribe with.
  * @param channel The channel to subscribe to.
@@ -66,12 +66,12 @@ int stop_command_t_publish(lcm_t *lcm, const char *channel, const stop_command_t
  * @param userdata An opaque pointer passed to @p handler when it is invoked.
  * @return 0 on success, <0 if an error occured
  */
-stop_command_t_subscription_t* stop_command_t_subscribe(lcm_t *lcm, const char *channel, stop_command_t_handler_t handler, void *userdata);
+state_t_subscription_t* state_t_subscribe(lcm_t *lcm, const char *channel, state_t_handler_t handler, void *userdata);
 
 /**
- * Removes and destroys a subscription created by stop_command_t_subscribe()
+ * Removes and destroys a subscription created by state_t_subscribe()
  */
-int stop_command_t_unsubscribe(lcm_t *lcm, stop_command_t_subscription_t* hid);
+int state_t_unsubscribe(lcm_t *lcm, state_t_subscription_t* hid);
 
 /**
  * Sets the queue capacity for a subscription.
@@ -86,26 +86,26 @@ int stop_command_t_unsubscribe(lcm_t *lcm, stop_command_t_subscription_t* hid);
  *  on the subscription.
  * @return 0 on success, <0 if an error occured
  */
-int stop_command_t_subscription_set_queue_capacity(stop_command_t_subscription_t* subs,
+int state_t_subscription_set_queue_capacity(state_t_subscription_t* subs,
                               int num_messages);
 
 /**
- * Encode a message of type stop_command_t into binary form.
+ * Encode a message of type state_t into binary form.
  *
  * @param buf The output buffer.
  * @param offset Encoding starts at this byte offset into @p buf.
  * @param maxlen Maximum number of bytes to write.  This should generally
- *               be equal to stop_command_t_encoded_size().
+ *               be equal to state_t_encoded_size().
  * @param msg The message to encode.
  * @return The number of bytes encoded, or <0 if an error occured.
  */
-int stop_command_t_encode(void *buf, int offset, int maxlen, const stop_command_t *p);
+int state_t_encode(void *buf, int offset, int maxlen, const state_t *p);
 
 /**
- * Decode a message of type stop_command_t from binary form.
+ * Decode a message of type state_t from binary form.
  * When decoding messages containing strings or variable-length arrays, this
  * function may allocate memory.  When finished with the decoded message,
- * release allocated resources with stop_command_t_decode_cleanup().
+ * release allocated resources with state_t_decode_cleanup().
  *
  * @param buf The buffer containing the encoded message
  * @param offset The byte offset into @p buf where the encoded message starts.
@@ -113,27 +113,31 @@ int stop_command_t_encode(void *buf, int offset, int maxlen, const stop_command_
  * @param msg Output parameter where the decoded message is stored
  * @return The number of bytes decoded, or <0 if an error occured.
  */
-int stop_command_t_decode(const void *buf, int offset, int maxlen, stop_command_t *msg);
+int state_t_decode(const void *buf, int offset, int maxlen, state_t *msg);
 
 /**
- * Release resources allocated by stop_command_t_decode()
+ * Release resources allocated by state_t_decode()
  * @return 0
  */
-int stop_command_t_decode_cleanup(stop_command_t *p);
+int state_t_decode_cleanup(state_t *p);
 
 /**
- * Check how many bytes are required to encode a message of type stop_command_t
+ * Check how many bytes are required to encode a message of type state_t
  */
-int stop_command_t_encoded_size(const stop_command_t *p);
+int state_t_encoded_size(const state_t *p);
+size_t state_t_struct_size(void);
+int  state_t_num_fields(void);
+int  state_t_get_field(const state_t *p, int i, lcm_field_t *f);
+const lcm_type_info_t *state_t_get_type_info(void);
 
 // LCM support functions. Users should not call these
-int64_t __stop_command_t_get_hash(void);
-uint64_t __stop_command_t_hash_recursive(const __lcm_hash_ptr *p);
-int     __stop_command_t_encode_array(void *buf, int offset, int maxlen, const stop_command_t *p, int elements);
-int     __stop_command_t_decode_array(const void *buf, int offset, int maxlen, stop_command_t *p, int elements);
-int     __stop_command_t_decode_array_cleanup(stop_command_t *p, int elements);
-int     __stop_command_t_encoded_array_size(const stop_command_t *p, int elements);
-int     __stop_command_t_clone_array(const stop_command_t *p, stop_command_t *q, int elements);
+int64_t __state_t_get_hash(void);
+uint64_t __state_t_hash_recursive(const __lcm_hash_ptr *p);
+int     __state_t_encode_array(void *buf, int offset, int maxlen, const state_t *p, int elements);
+int     __state_t_decode_array(const void *buf, int offset, int maxlen, state_t *p, int elements);
+int     __state_t_decode_array_cleanup(state_t *p, int elements);
+int     __state_t_encoded_array_size(const state_t *p, int elements);
+int     __state_t_clone_array(const state_t *p, state_t *q, int elements);
 
 #ifdef __cplusplus
 }
