@@ -45,10 +45,6 @@ float p_v_term = 0;
 float d_v_term = 0;
 float l_pwm = 0;
 float r_pwm = 0;
-float last_l_enc = 0;
-float l_enc = 0;
-float last_r_enc = 0;
-float r_enc = 0;
 
 float vel = 0;
 float ang = 0;
@@ -62,8 +58,6 @@ void simple_motor_command_handler(const lcm_recv_buf_t* rbuf,
                                   const char* channel,
                                   const simple_motor_command_t* msg,
                                   void* user);
-
-void calc_pd_v();
 
 void pd_controller();
 
@@ -131,22 +125,12 @@ int main(int argc, char *argv[]){
             printf("timeout...\r");
         }
 		// define a timeout (for erroring out) and the delay time
-        // calc_pd_v();
 		pd_controller();
 		lcm_handle_timeout(lcm, 1);
         publish_encoder_msg();
         rc_nanosleep(1E9 / 10); //handle at 10Hz
 		
-		// last_l_enc = l_enc;
-		// l_enc = (float) (enc_l_pol * rc_encoder_eqep_read(1));
-		// last_r_enc = r_enc;
-		// r_enc = (float) (enc_r_pol * rc_encoder_eqep_read(2));
-		
 		last_p_v_term = p_v_term;
-		// float delta_L = l_enc - last_l_enc;
-    	// float delta_R = r_enc - last_r_enc;
-    	// float delta_s = (delta_L+delta_R)*(2*M_PI*0.042)/(2.0*20.78);
-    	// trouble maker
         float t = (float) (t_prev - t_prev_v) / 1E9;
 		p_v_term = v_goal - vel;
 		d_v_term = (p_v_term - last_p_v_term)/t;
@@ -156,7 +140,6 @@ int main(int argc, char *argv[]){
     lcm_destroy(lcm);
 	// rc_remove_pid_file();   // remove pid file LAST
 
-    print_answers();
 	return 0;
 }
 
@@ -174,49 +157,6 @@ int main(int argc, char *argv[]){
 /// the sign of the velocity should indicate direction, and angular velocity 
 //  indicates turning rate. 
 //////////////////////////////////////////////////////////////////////////////
-
-void calc_pd_v(){
-	mbot_encoder_t encoder1;
-    encoder1.utime = rc_nanos_since_epoch();
-    encoder1.left_delta = 0;
-    encoder1.right_delta = 0;
-    encoder1.leftticks = enc_l_pol * rc_encoder_eqep_read(1);
-    encoder1.rightticks = enc_r_pol * rc_encoder_eqep_read(2);
-    
-    mbot_encoder_t encoder2;
-    encoder2.utime = rc_nanos_since_epoch();
-    encoder2.left_delta = 0;
-    encoder2.right_delta = 0;
-    encoder2.leftticks = enc_l_pol * rc_encoder_eqep_read(1);
-    encoder2.rightticks = enc_r_pol * rc_encoder_eqep_read(2);
-    double delta_L = (double) (encoder2.leftticks - encoder1.leftticks);
-    double delta_R = (double) (encoder2.rightticks - encoder1.rightticks);
-    double delta_s = (delta_L+delta_R)*(2*M_PI*0.042)/(2.0*20*78);
-    double t1 = (double) (encoder2.utime-encoder1.utime)*0.000001;
-	double last_p_v_term = v_goal - delta_s/t1;
-
-	mbot_encoder_t encoder3;
-    encoder3.utime = rc_nanos_since_epoch();
-    encoder3.left_delta = 0;
-    encoder3.right_delta = 0;
-    encoder3.leftticks = enc_l_pol * rc_encoder_eqep_read(1);
-    encoder3.rightticks = enc_r_pol * rc_encoder_eqep_read(2);
-    
-	mbot_encoder_t encoder4;
-    encoder4.utime = rc_nanos_since_epoch();
-    encoder4.left_delta = 0;
-    encoder4.right_delta = 0;
-    encoder4.leftticks = enc_l_pol * rc_encoder_eqep_read(1);
-    encoder4.rightticks = enc_r_pol * rc_encoder_eqep_read(2);
-    delta_L = (double) (encoder4.leftticks - encoder3.leftticks);
-    delta_R = (double) (encoder4.rightticks - encoder3.rightticks);
-    delta_s = (delta_L+delta_R)*(2*M_PI*0.042)/(2.0*20*78);
-    double t2 = (double) (encoder4.utime-encoder3.utime)*0.000001;
-	p_v_term = v_goal - delta_s/t2;
-	
-	double t_e = (double) (encoder4.utime + encoder3.utime - encoder2.utime - encoder1.utime)*0.000001/2.0;
-	d_v_term = (p_v_term-last_p_v_term)/t_e;
-}
 
 void simple_motor_command_handler(const lcm_recv_buf_t* rbuf,
                                   const char* channel,
@@ -276,17 +216,3 @@ void publish_encoder_msg(){
     mbot_encoder_t_publish(lcm, MBOT_ENCODER_CHANNEL, &encoder_msg);
 }
 
-void print_answers()
-{
-    /// Question 1:
-    /// When you give your motors the same PWM command does the robot 
-    /// move straight? Why not? What could be the reason for that? 
-    /// How can we fix that?
-    printf("Answer 1:\n Print your answer here \n");
-
-    /// Question 2:
-    /// What could be some uses of logs in our project? why would we 
-    /// want to play logs at different speeds?
-    printf("Answer 2:\n Print your answer here \n");
-
-}
