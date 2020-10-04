@@ -106,7 +106,7 @@ class ORBDetector:
       ROW = 0
       COL = 1
       WEIGHT = 2
-      DIST_THRESH = 20
+      DIST_THRESH = 30
 
       centers = []
       for r in raw_points:
@@ -144,19 +144,20 @@ class ORBDetector:
     def show_orb_features(self, image):      
         # Get keypoints and descriptors for image
 
-        HOR_LOW = 80
-        HOR_HIGH = 400
-        VERT_LOW = 80
-        VERT_HIGH = 560
+        HOR_LOW = 90
+        HOR_HIGH = image.shape[0] - HOR_LOW
+        VERT_LOW = 100
+        VERT_HIGH = image.shape[1] - VERT_LOW
 
         time_bef = time.time()
         kp, descriptors = self.find_keypoints_descriptors(image[HOR_LOW:HOR_HIGH, VERT_LOW: VERT_HIGH])
-        print ("+++++", time.time()- time_bef, " TIME TOOK: find_keypoints_descriptors+++++")
+        # print ("+++++", time.time()- time_bef, " TIME TOOK: find_keypoints_descriptors+++++")
 
+        # print(image.shape[0], image.shape[1])
 
 
         M_DIST_THRESH = 400
-        COMB_THRESH = 8
+        COMB_THRESH = 7
 
         # for k in kp:
         #   pt = (int(k.pt[0]), int(k.pt[1]))
@@ -190,7 +191,7 @@ class ORBDetector:
 
         for x in cross_centers:
           if x[2]>COMB_THRESH:
-            cv2.circle(image, (x[0]+HOR_LOW,x[1]+VERT_LOW), 5, [0,0,255], -1)
+            cv2.circle(image, (x[0]+VERT_LOW,x[1]+HOR_LOW), 5, [0,0,255], -1)
 
 
 

@@ -2,6 +2,7 @@ import pygame
 from pygame.locals import *
 from picamera.array import PiRGBArray
 from picamera import PiCamera
+import matplotlib.pyplot as plt
 import cv2
 import time
 import numpy as np
@@ -16,6 +17,12 @@ sys.path.append("vision")
 from vision import orb_detector
 from orb_detector import ORBDetector
 
+
+def show_pic(Ix):
+    plt.figure()
+    plt.axis('off')
+    plt.imshow(Ix)
+    plt.show()
 
 
 
@@ -37,22 +44,43 @@ def main(task_number):
 
     # ===== Red dot tracker init ========
     cross_detector = ORBDetector(debug=False) 
-    cross_img = cv2.imread('cross_ugly.png')
+    cross_img = cv2.imread('cross_ugly.png') # CHANGE ME! - your local photo
     cross_detector.read_cross(cross_img)
+    # ===== END red dot tracker init ======
+
+
+
+    # ===== Blue object tracker init ========
+    detector = btd.Tape_Detector()	
     # ===== END red dot tracker init ======
 
 
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         image = frame.array
-        if (flip_h == 1 & flip_v == 0):
-            image = cv2.flip(image, 1)
-        elif (flip_h == 0 & flip_v == 1):
-            image = cv2.flip(image, 0)
-        elif (flip_h == 1 & flip_v == 1):
-            image = cv2.flip(image, -1)
-        
+        # if (flip_h == 1 & flip_v == 0):
+        #     image = cv2.flip(image, 1)
+        # elif (flip_h == 0 & flip_v == 1):
+        #     image = cv2.flip(image, 0)
+        # elif (flip_h == 1 & flip_v == 1):
+        #     image = cv2.flip(image, -1)
+        #show_pic(cv2.flip(image,0)) #horizontal
+        image = cv2.flip(image,-1) # CHANGE ME! -1 = vertical flip
+        #show_pic(cv2.flip(image,-1))#both
+
+
         screen.fill([0,0,0])
 
+
+        # ===== Blue line detection =====
+
+        start = time.process_time()	
+        found, center = detector.search_stopline(image)	
+        if found:		
+            print("CENTER:", center)	
+            image = cv2.circle(image, center, 15, (0,0,255), -1)	
+        
+
+        # ===== END Blue line detection ======
         # ===== Add red dot here ========
 
         cross_detector.show_orb_features(image)
@@ -60,6 +88,7 @@ def main(task_number):
         # ===== END add red dot =========
 
 
+        print("time elapsed:", time.process_time() - start)
 
 
 
