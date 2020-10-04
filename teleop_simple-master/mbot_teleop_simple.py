@@ -9,6 +9,7 @@ import sys
 sys.path.append("lcmtypes")
 import lcm
 from lcmtypes import mbot_motor_pwm_t
+import blue_tape_detectors as btd
 import argparse
 
 sys.path.append("vision")
@@ -113,3 +114,4 @@ if __name__ == "__main__":
   args = vars(ap.parse_args())
 
   main(args["task"])
+
