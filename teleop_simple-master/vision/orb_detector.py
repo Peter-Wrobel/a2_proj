@@ -13,8 +13,6 @@ def euclidian_distance(point_a, point_b):
   point_a: (r, c) tuple
   point_b: (r, c) tuple
   """
-
-  if len(point_a)!= len(point_b):
   sum = 0
   for i in range(len(point_a)):
     sum += (point_a[i] - point_b[i])**2
@@ -71,7 +69,7 @@ This class just searches for ORB features and draws them on the image
 class ORBDetector:
     def __init__(self, debug=False):
         # Initiate ORB detector
-        self.orb = cv2.ORB_create(nfeatures=250)
+        self.orb = cv2.ORB_create(nfeatures=40)
 
         # A list of ORBTrackers
         self.trackers = []
@@ -108,7 +106,7 @@ class ORBDetector:
       ROW = 0
       COL = 1
       WEIGHT = 2
-      DIST_THRESH = 30
+      DIST_THRESH = 20
 
       centers = []
       for r in raw_points:
@@ -143,14 +141,22 @@ class ORBDetector:
         self.cross_orb =  Cross_ORB(kp, descriptors)
 
 
-    def show_orb_features(self, image, orig_img):      
+    def show_orb_features(self, image):      
         # Get keypoints and descriptors for image
-        kp, descriptors = self.find_keypoints_descriptors(image)
-        print(len(descriptors))
+
+        HOR_LOW = 80
+        HOR_HIGH = 400
+        VERT_LOW = 80
+        VERT_HIGH = 560
+
+        time_bef = time.time()
+        kp, descriptors = self.find_keypoints_descriptors(image[HOR_LOW:HOR_HIGH, VERT_LOW: VERT_HIGH])
+        print ("+++++", time.time()- time_bef, " TIME TOOK: find_keypoints_descriptors+++++")
 
 
-        M_DIST_THRESH = 340
-        COMB_THRESH = 1
+
+        M_DIST_THRESH = 400
+        COMB_THRESH = 8
 
         # for k in kp:
         #   pt = (int(k.pt[0]), int(k.pt[1]))
@@ -163,7 +169,7 @@ class ORBDetector:
         good = []
         for m in matches:
           match_point = (int(kp[m.queryIdx].pt[0]),int(kp[m.queryIdx].pt[1]))
-          cv2.circle(image, match_point, 5, [0,255,0], -1)
+          # cv2.circle(image, match_point, 5, [0,255,0], -1)
           if m.distance<M_DIST_THRESH:
             good.append(m)
             
@@ -178,13 +184,13 @@ class ORBDetector:
           joey_point = (int(kpc[match.trainIdx].pt[0]),int(kpc[match.trainIdx].pt[1])) 
           orb_orig.append(joey_point)
           orb_centers.append(match_point)
-          cv2.circle(image, match_point, 5, [255,0,0], -1)
+          # cv2.circle(image, match_point, 5, [255,0,0], -1)
 
         cross_centers = self.merge_points(orb_centers)
 
         for x in cross_centers:
           if x[2]>COMB_THRESH:
-            cv2.circle(image, (x[0],x[1]), 5, [0,0,255], -1)
+            cv2.circle(image, (x[0]+HOR_LOW,x[1]+VERT_LOW), 5, [0,0,255], -1)
 
 
 

@@ -9,13 +9,20 @@ import sys
 sys.path.append("lcmtypes")
 import lcm
 from lcmtypes import mbot_motor_pwm_t
-FWD_PWM_CMD = 0.3
-TURN_PWM_CMD = 0.3
-flip_h = 0
-flip_v = 0
+import argparse
+
+sys.path.append("vision")
+from vision import orb_detector
+from orb_detector import ORBDetector
 
 
-def main(task_number)
+
+
+def main(task_number):
+    FWD_PWM_CMD = 0.3
+    TURN_PWM_CMD = 0.3
+    flip_h = 1
+    flip_v = 1
     lc = lcm.LCM("udpm://239.255.76.67:7667?ttl=1")
     pygame.init()
     pygame.display.set_caption("MBot TeleOp")
@@ -25,6 +32,15 @@ def main(task_number)
     camera.framerate = 32
     rawCapture = PiRGBArray(camera, size=(640, 480))
     time.sleep(0.5)
+
+
+    # ===== Red dot tracker init ========
+    cross_detector = ORBDetector(debug=False) 
+    cross_img = cv2.imread('cross_ugly.png')
+    cross_detector.read_cross(cross_img)
+    # ===== END red dot tracker init ======
+
+
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         image = frame.array
         if (flip_h == 1 & flip_v == 0):
@@ -37,19 +53,12 @@ def main(task_number)
         screen.fill([0,0,0])
 
         # ===== Add red dot here ========
-        if task_number == 2:
-            image = detector.scan_image(image)
-        elif (task_number == 3 or task_number == 4):
-            if frame_count % 4 == 0:
-                image = detector.scan_image(image)
-            else:
-                image = detector.scan_partial(image)
+
+        cross_detector.show_orb_features(image)
+
         # ===== END add red dot =========
 
-        # ===== Show ORB features =======
-        elif task_number == 5:
-            detector.show_orb_features(image)
-        # ===== END show ORB features ===
+
 
 
 
