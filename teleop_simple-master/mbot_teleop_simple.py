@@ -57,13 +57,20 @@ def main(task_number):
     detector = btd.Tape_Detector()	
     # ===== END red dot tracker init ========
 
+
     # ===== State Machine Init ==============
     state = state_t()
+    state.state = 0
     steer = steer_command_t()
     turn = turn_command_t()
     # ===== END State Machine Init ==========
 
+    # ===== State Channel Subscription ======
+    subscription = lc.subscribe("STATE", state_handler)
+    # ===== END State Channel Subscription ==
+
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+        lc.handle_timeout(15)
         image = frame.array
         # if (flip_h == 1 & flip_v == 0):
         #     image = cv2.flip(image, 1)
@@ -78,23 +85,46 @@ def main(task_number):
 
         screen.fill([0,0,0])
 
-        start = time.process_time()	
         
-        # ===== Blue line detection =====        
-        found, center = detector.search_stopline(image)	
-        if found:		
-            print("CENTER:", center)	
-            image = cv2.circle(image, center, 15, (0,0,255), -1)	
+        if state.state == 0:
+            start = time.process_time()	
+            # ===== Blue line detection =====        
+            found, center = detector.search_stopline(image)	
+            if found:		
+                print("STOPLINE CENTER:", center)	
+                image = cv2.circle(image, center, 15, (0,0,255), -1)
+                state.state = 1
+                #send the center of stopline over LCM
+            
+            # ===== END Blue line detection =
+            
+            # ===== Add red dot here ========
+
+            cross_detector.show_orb_features(image)
+
+            # ===== END add red dot =========
+            print("time elapsed:", time.process_time() - start)
+            
+            #publish info
         
-        # ===== END Blue line detection ======
-        
-        # ===== Add red dot here ========
 
-        cross_detector.show_orb_features(image)
+        elif state.state == 1:    
+            found, center = detector.search_stopline(image)	
+            if found:		
+                print("STOPLINE CENTER:", center)	
+                image = cv2.circle(image, center, 15, (0,0,255), -1)
+                #send the center of stopline over LCM
 
-        # ===== END add red dot =========
 
-        print("time elapsed:", time.process_time() - start)
+        elif state.state == 2:
+            # ===== Post detection ==========        
+            found, center = detector.search_post(image)	
+            if found:		
+                print("POST CENTER:", center)	
+                image = cv2.circle(image, center, 15, (0,0,255), -1)
+                #send the center of post over LCM
+            
+            # ===== END Post detection ======
 
 
 
@@ -112,38 +142,45 @@ def main(task_number):
                 sys.exit()
                 cv2.destroyAllWindows()
         key_input = pygame.key.get_pressed()  
-        if key_input[pygame.K_LEFT]:
-            turn += 1.0
-        if key_input[pygame.K_UP]:
-            fwd +=1.0
-        if key_input[pygame.K_RIGHT]:
-            turn -= 1.0
-        if key_input[pygame.K_DOWN]:
-            fwd -= 1.0
-        if key_input[pygame.K_h]:
-            if flip_h == 0:
-                flip_h = 1
-            else:
-                flip_h = 0
-        if key_input[pygame.K_v]:
-            if flip_v == 0:
-                flip_v = 1
-            else:
-                flip_v = 0
+        # if key_input[pygame.K_LEFT]:
+        #     turn += 1.0
+        # if key_input[pygame.K_UP]:
+        #     fwd +=1.0
+        # if key_input[pygame.K_RIGHT]:
+        #     turn -= 1.0
+        # if key_input[pygame.K_DOWN]:
+        #     fwd -= 1.0
+        # if key_input[pygame.K_h]:
+        #     if flip_h == 0:
+        #         flip_h = 1
+        #     else:
+        #         flip_h = 0
+        # if key_input[pygame.K_v]:
+        #     if flip_v == 0:
+        #         flip_v = 1
+        #     else:
+        #         flip_v = 0
         if key_input[pygame.K_q]:
                 pygame.quit()
                 sys.exit()
                 cv2.destroyAllWindows()
                 
-        command = mbot_motor_pwm_t()
-        command.left_motor_pwm =  fwd * FWD_PWM_CMD - turn * TURN_PWM_CMD
-        command.right_motor_pwm = fwd * FWD_PWM_CMD + turn * TURN_PWM_CMD
-        lc.publish("MBOT_MOTOR_PWM",command.encode())
+        #command = mbot_motor_pwm_t()
+        #command.left_motor_pwm =  fwd * FWD_PWM_CMD - turn * TURN_PWM_CMD
+        #command.right_motor_pwm = fwd * FWD_PWM_CMD + turn * TURN_PWM_CMD
+        #lc.publish("MBOT_MOTOR_PWM",command.encode())
         lc.publish("STATE",state.encode())
-        lc.publish("STEER_COMMAND",steer.encode())
+        if state.state == 0:
+            lc.publish("STEER_COMMAND",steer.encode())
+        
         lc.publish("TURN_COMMAND",turn.encode())
         rawCapture.truncate(0)
 
+
+def state_handler(channel, data):
+    msg = state_t.decode(data)
+    print("Received message on channel \"%s\"" % channel)
+    
 
 if __name__ == "__main__":
   # Construct the argument parser and parse the arguments
