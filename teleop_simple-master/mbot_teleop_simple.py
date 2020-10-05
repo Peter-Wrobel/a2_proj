@@ -10,6 +10,9 @@ import sys
 sys.path.append("lcmtypes")
 import lcm
 from lcmtypes import mbot_motor_pwm_t
+from lcmtypes import state_t
+from lcmtypes import steer_command_t
+from lcmtypes import turn_command_t
 import blue_tape_detectors as btd
 import argparse
 
@@ -42,18 +45,23 @@ def main(task_number):
     time.sleep(0.5)
 
 
-    # ===== Red dot tracker init ========
+    # ===== Red dot tracker init ============
     cross_detector = ORBDetector(debug=False) 
     cross_img = cv2.imread('cross_ugly.png') # CHANGE ME! - your local photo
     cross_detector.read_cross(cross_img)
-    # ===== END red dot tracker init ======
+    # ===== END red dot tracker init ========
 
 
 
     # ===== Blue object tracker init ========
     detector = btd.Tape_Detector()	
-    # ===== END red dot tracker init ======
+    # ===== END red dot tracker init ========
 
+    # ===== State Machine Init ==============
+    state = state_t()
+    steer = steer_command_t()
+    turn = turn_command_t()
+    # ===== END State Machine Init ==========
 
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         image = frame.array
@@ -64,29 +72,27 @@ def main(task_number):
         # elif (flip_h == 1 & flip_v == 1):
         #     image = cv2.flip(image, -1)
         #show_pic(cv2.flip(image,0)) #horizontal
-        image = cv2.flip(image,-1) # CHANGE ME! -1 = vertical flip
+        image = cv2.flip(image,1) # CHANGE ME! -1 = vertical flip
         #show_pic(cv2.flip(image,-1))#both
 
 
         screen.fill([0,0,0])
 
-
-        # ===== Blue line detection =====
-
         start = time.process_time()	
+        
+        # ===== Blue line detection =====        
         found, center = detector.search_stopline(image)	
         if found:		
             print("CENTER:", center)	
             image = cv2.circle(image, center, 15, (0,0,255), -1)	
         
-
         # ===== END Blue line detection ======
+        
         # ===== Add red dot here ========
 
         cross_detector.show_orb_features(image)
 
         # ===== END add red dot =========
-
 
         print("time elapsed:", time.process_time() - start)
 
@@ -94,7 +100,7 @@ def main(task_number):
 
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = image.swapaxes(0,1)
-        image = cv2.flip(image, -1)
+        #image = cv2.flip(image, -1)
         image = pygame.surfarray.make_surface(image)
         screen.blit(image, (0,0))
         pygame.display.update()
@@ -133,6 +139,9 @@ def main(task_number):
         command.left_motor_pwm =  fwd * FWD_PWM_CMD - turn * TURN_PWM_CMD
         command.right_motor_pwm = fwd * FWD_PWM_CMD + turn * TURN_PWM_CMD
         lc.publish("MBOT_MOTOR_PWM",command.encode())
+        lc.publish("STATE",state.encode())
+        lc.publish("STEER_COMMAND",steer.encode())
+        lc.publish("TURN_COMMAND",turn.encode())
         rawCapture.truncate(0)
 
 
