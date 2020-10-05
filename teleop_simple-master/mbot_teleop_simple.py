@@ -9,8 +9,9 @@ import numpy as np
 import sys
 sys.path.append("lcmtypes")
 import lcm
-from lcmtypes import mbot_motor_pwm_t
-from lcmtypes import state_t
+#from lcmtypes import mbot_motor_pwm_t
+from lcmtypes.rpi_state_t import rpi_state_t
+from lcmtypes.bbb_state_t import bbb_state_t
 from lcmtypes import steer_command_t
 from lcmtypes import turn_command_t
 import blue_tape_detectors as btd
@@ -20,6 +21,8 @@ sys.path.append("vision")
 from vision import orb_detector
 from orb_detector import ORBDetector
 
+
+BBB_TURN_STATE = False
 
 def show_pic(Ix):
     plt.figure()
@@ -58,12 +61,21 @@ def main(task_number):
     # ===== END red dot tracker init ========
 
     # ===== State Machine Init ==============
-    state = state_t()
-    steer = steer_command_t()
-    turn = turn_command_t()
+    state = rpi_state_t()
+    state.state = 0
+    #steer = steer_command_t.steer_command_t()
+    #turn = turn_command_t.turn_command_t()
     # ===== END State Machine Init ==========
 
+    # ===== State Channel Subscription ======
+    subscription = lc.subscribe("BBB_STATE", state_handler)
+    # ===== END State Channel Subscription ==
+
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+        if(state.state >= 0): #wait for state == 2
+            lc.handle_timeout(15)
+        if BBB_TURN_STATE == True:
+            print("HEY")
         image = frame.array
         # if (flip_h == 1 & flip_v == 0):
         #     image = cv2.flip(image, 1)
@@ -75,26 +87,34 @@ def main(task_number):
         image = cv2.flip(image,1) # CHANGE ME! -1 = vertical flip
         #show_pic(cv2.flip(image,-1))#both
 
-
         screen.fill([0,0,0])
 
-        start = time.process_time()	
-        
-        # ===== Blue line detection =====        
-        found, center = detector.search_stopline(image)	
-        if found:		
-            print("CENTER:", center)	
-            image = cv2.circle(image, center, 15, (0,0,255), -1)	
-        
-        # ===== END Blue line detection ======
-        
-        # ===== Add red dot here ========
+        if state.state == 0:
+            #start = time.process_time()	
+            # ===== Blue line detection =====        
+            found, center = detector.search_stopline(image)	
+            if found:		
+                print("CENTER:", center)	
+                image = cv2.circle(image, center, 15, (0,0,255), -1)	
+                state.state = 1
+                lc.publish("RPI_STATE",state.encode())
+            # ===== END Blue line detection ======
+            
+            # ===== Add red dot here ========
+            if not found:
+                cross_detector.show_orb_features(image)
+                lc.publish("RPI_STATE",state.encode())
+            # ===== END add red dot =========
+            #print("time elapsed:", time.process_time() - start)
 
-        cross_detector.show_orb_features(image)
+        elif state.state == 1:
+            lc.publish("RPI_STATE",state.encode())
+        elif state.state == 2:
+            pass
+        else:
+            print("STATE ERROR")
+            # TODO -> HANDLE
 
-        # ===== END add red dot =========
-
-        print("time elapsed:", time.process_time() - start)
 
 
 
@@ -135,15 +155,22 @@ def main(task_number):
                 sys.exit()
                 cv2.destroyAllWindows()
                 
-        command = mbot_motor_pwm_t()
-        command.left_motor_pwm =  fwd * FWD_PWM_CMD - turn * TURN_PWM_CMD
-        command.right_motor_pwm = fwd * FWD_PWM_CMD + turn * TURN_PWM_CMD
-        lc.publish("MBOT_MOTOR_PWM",command.encode())
-        lc.publish("STATE",state.encode())
-        lc.publish("STEER_COMMAND",steer.encode())
-        lc.publish("TURN_COMMAND",turn.encode())
+        #command = mbot_motor_pwm_t()
+        #command.left_motor_pwm =  fwd * FWD_PWM_CMD - turn * TURN_PWM_CMD
+        #command.right_motor_pwm = fwd * FWD_PWM_CMD + turn * TURN_PWM_CMD
+        #lc.publish("MBOT_MOTOR_PWM",command.encode())
+        #lc.publish("STATE",state.encode())
+        #lc.publish("STEER_COMMAND",steer.encode())
+        #lc.publish("TURN_COMMAND",turn.encode())
         rawCapture.truncate(0)
 
+def state_handler(channel, data):
+    msg = bbb_state_t().decode(data)
+    print("Received message: ", msg.state, " on channel ", channel)
+    if msg.state == 2:
+        print("FOUND")
+        global BBB_TURN_STATE
+        BBB_TURN_STATE = True
 
 if __name__ == "__main__":
   # Construct the argument parser and parse the arguments

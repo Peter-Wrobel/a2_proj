@@ -83,7 +83,7 @@ void state_handler(const lcm_recv_buf_t* rbuf,
 
 void steer_command_handler(const lcm_recv_buf_t* rbuf,
                           const char* channel,
-                          const stop_command_t* msg,
+                          const steer_command_t* msg,
                           void* user);
 
 
@@ -149,7 +149,8 @@ int main(int argc, char *argv[]){
     printf("Running...\n");
 	state_t_subscribe(lcm, "STATE", &state_handler, NULL);
 	steer_command_t_subscribe(lcm, "STEER", &steer_command_handler, NULL);
-	turn_command_t_subscribe(lcm, "TURN", &turn_command_handler, NULL);
+	//turn_command_t_subscribe(lcm, "TURN", &turn_command_handler, NULL);
+    printf("STATE, %d\n",mode);
 	// while(rc_get_state()==RUNNING){
     for(int i = 0; i < 50; i++) {
         watchdog_timer += 0.01;
@@ -233,7 +234,7 @@ void state_handler(const lcm_recv_buf_t* rbuf,
 
 void steer_command_handler(const lcm_recv_buf_t* rbuf,
                            const char* channel,
-                           const stop_command_t* msg,
+                           const steer_command_t* msg,
                            void* user) {
 	watchdog_timer = 0.0;
 	p_w_term = msg->p_term;
