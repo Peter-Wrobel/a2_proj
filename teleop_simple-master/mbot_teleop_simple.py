@@ -44,7 +44,7 @@ def main(task_number):
 
     # ===== Red dot tracker init ========
     cross_detector = ORBDetector(debug=False) 
-    cross_img = cv2.imread('cross_ugly.png') # CHANGE ME! - your local photo
+    cross_img = cv2.imread('my_train.jpg') # CHANGE ME! - your local photo
     cross_detector.read_cross(cross_img)
     # ===== END red dot tracker init ======
 
@@ -64,7 +64,7 @@ def main(task_number):
         # elif (flip_h == 1 & flip_v == 1):
         #     image = cv2.flip(image, -1)
         #show_pic(cv2.flip(image,0)) #horizontal
-        image = cv2.flip(image,-1) # CHANGE ME! -1 = vertical flip
+        #image = cv2.flip(image,-1) # CHANGE ME! -1 = vertical flip
         #show_pic(cv2.flip(image,-1))#both
 
 
@@ -73,7 +73,7 @@ def main(task_number):
 
         # ===== Blue line detection =====
 
-        start = time.process_time()	
+        # start = time.process_time()	
         found, center = detector.search_stopline(image)	
         if found:		
             print("CENTER:", center)	
@@ -88,7 +88,7 @@ def main(task_number):
         # ===== END add red dot =========
 
 
-        print("time elapsed:", time.process_time() - start)
+        # print("time elapsed:", time.process_time() - start)
 
 
 
