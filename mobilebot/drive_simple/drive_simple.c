@@ -146,8 +146,8 @@ int main(int argc, char *argv[]){
     steer_command_t_subscribe(lcm, "STEER", &steer_command_handler, NULL);
 //    turn_command_t_subscribe(lcm, "TURN", &turn_command_handler, NULL);
   
-    while(rc_get_state()==RUNNING){
-//    for(int i = 0; i < 50; i++) {
+//    while(rc_get_state()==RUNNING){
+    for(int i = 0; i < 50; i++) {
         watchdog_timer += 0.01;
 /*	if (i > 30) {
 		mode = 1;
@@ -232,15 +232,15 @@ void pd_controller() {
 	watchdog_timer = 0.0;
 	float k_p = 0.5;
 	float k_d = 0.1;
-	float k_p_w = 0.001;
-	float k_d_w = 0.0;
+	float k_p_w = 0.000002;
+	float k_d_w = 0.000001;
     // printf("e: %f\n", p_v_term);
     // printf("e_dot: %f\n\n", d_v_term);
 	l_pwm = l_pwm + mot_l_pol * (k_p*p_v_term + k_d*d_v_term);
 	r_pwm = r_pwm + mot_r_pol * (k_p*p_v_term + k_d*d_v_term);
 	
-	l_pwm = l_pwm + mot_l_pol * (k_p_w*p_w_term + k_d_w*d_w_term);
-	r_pwm = r_pwm - mot_r_pol * (k_p_w*p_w_term - k_d_w*d_w_term);
+	l_pwm = l_pwm - mot_l_pol * (k_p_w*p_w_term + k_d_w*d_w_term);
+	r_pwm = r_pwm + mot_r_pol * (k_p_w*p_w_term - k_d_w*d_w_term);
 }
 
 void stop_controller() {
@@ -291,7 +291,7 @@ void publish_encoder_msg(){
 
     vel = (encoder_msg.left_delta+encoder_msg.right_delta)*(2*M_PI*0.042)/(2.0*20*78*t_passed);
     ang = (-encoder_msg.left_delta+encoder_msg.right_delta)*(2*M_PI*0.042)/(0.11*20*78*t_passed);
-    printf(" ENC: %lld | %lld  - v: %f | w: %f | p-term: %f | l-pwm: %f | - t_pass: %f | t: %lld\n", encoder_msg.leftticks, encoder_msg.rightticks, vel, ang, p_v_term, l_pwm, t_passed, encoder_msg.utime);
+    printf(" ENC: %lld | %lld  - v: %f | w: %f | e_target: %f | l-pwm: %f | r-pwm: %f - t_pass: %f\n", encoder_msg.leftticks, encoder_msg.rightticks, vel, ang, p_w_term, l_pwm, r_pwm, t_passed);
 
     t_prev = encoder_msg.utime;
     left_prev = curr_left;
