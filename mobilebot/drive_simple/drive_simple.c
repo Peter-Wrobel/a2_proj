@@ -232,8 +232,8 @@ void pd_controller() {
 	watchdog_timer = 0.0;
 	float k_p = 0.5;
 	float k_d = 0.1;
-	float k_p_w = 0.01;
-	float k_d_w = 0.001;
+	float k_p_w = 0.001;
+	float k_d_w = 0.0;
     // printf("e: %f\n", p_v_term);
     // printf("e_dot: %f\n\n", d_v_term);
 	l_pwm = l_pwm + k_p*p_v_term + k_d*d_v_term;

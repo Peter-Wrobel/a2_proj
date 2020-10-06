@@ -50,7 +50,7 @@ def main(task_number):
 
     # ===== Red dot tracker init ============
     cross_detector = ORBDetector(debug=False) 
-    cross_img = cv2.imread('cross_ugly.png') # CHANGE ME! - your local photo
+    cross_img = cv2.imread('my_train.jpg') # CHANGE ME! - your local photo
     cross_detector.read_cross(cross_img)
     # ===== END red dot tracker init ========
 
