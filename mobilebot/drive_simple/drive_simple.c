@@ -279,12 +279,12 @@ void turn_controller() {
 	float k_p = 0.5;
 	float k_d = 0.1;
 	float k_p_turn = 0.00006;
-	float k_d_turn = 0.0015;
+    float k_d_turn = 0.0015;
 	l_pwm = l_pwm + mot_l_pol * (k_p*p_v_term + k_d*d_v_term);
 	r_pwm = r_pwm + mot_r_pol * (k_p*p_v_term + k_d*d_v_term);
 	
-	l_pwm = l_pwm - mot_l_pol * (k_p_turn*p_turn + k_d_turn*d_turn);
-	r_pwm = r_pwm + mot_r_pol * (k_p_turn*p_turn - k_d_turn*d_turn);
+	l_pwm = l_pwm + mot_l_pol * (k_p_turn*p_turn + k_d_turn*d_turn);
+	r_pwm = r_pwm - mot_r_pol * (k_p_turn*p_turn - k_d_turn*d_turn);
 }
 
 /*******************************************************************************
