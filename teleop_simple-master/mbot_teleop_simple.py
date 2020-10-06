@@ -22,7 +22,7 @@ from vision import orb_detector
 from orb_detector import ORBDetector
 
 
-BBB_TURN_STATE = False
+BBB_TURN_STATE = True #False
 
 def show_pic(Ix):
     plt.figure()
@@ -72,7 +72,7 @@ def main(task_number):
     # ===== END State Channel Subscription ==
     last_p_steer = 0
     last_p_turn = 0
-    start_turn = 0
+    init_turn = 0
     last_t = time.time()
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         print("in state", state.state)
@@ -81,7 +81,7 @@ def main(task_number):
             global BBB_TURN_STATE
             if BBB_TURN_STATE == True:
                 state.state = 2 
-                startTurn = time.process_time()
+                #startTurn = time.process_time()
 
         image = frame.array
         # if (flip_h == 1 & flip_v == 0):
@@ -129,25 +129,58 @@ def main(task_number):
             Do we want to pass some kind of information to the stopping functionality?
             '''
         elif state.state == 2:
-            BBB_TURN_STATE = False
+            # BBB_TURN_STATE = False
+            # when firstly turn
+            global turn_frame
+            if BBB_TURN_STATE:
+                turn_frame = 0
+                found, center = detector.search_post(image)
+                if found:
+                    init_turn = center[0]
+                    print("CENTER: ", center)
+                    BBB_TURN_STATE = False
+                    turn.p_term = 0
+                    turn.d_term = 0
+                    last_p_turn = turn.p_term
+            else:
+                found, center = detector.search_post(image)
+                if found:
+                    print("CENTER: ", center)
+                    turn.p_term = center[0] - init_turn
+                    turn.d_term = turn.p_term - last_p_turn
+                    last_p_turn = turn.p_term
+            
+            # check whether cross exists after 1s
+            # if turn_frame > 10:
+            if turn_frame > 10:
+                _, center = cross_detector.show_orb_features(image)
+                if center is not None and (center[0] - (image.shape[1] // 2)) < 200 and (center[0] - (image.shape[1] // 2)) > -200:
+                    state.state = 0
+            cur_t = time.time()
+            delta_t = (cur_t - last_t)
+            last_t = cur_t
+            print("TURN COMAND: p = ", turn.p_term, " d = ", turn.d_term)
+            lc.publish("TURN", turn.encode())
+            lc.publish("RPI_STATE",state.encode())
+            turn_frame = turn_frame + 1
             '''
             Still need to implement logic to determine when to stop turning and when to start continuing straight
             '''
-            timePassed = time.process_time() - startTurn
-            if(timePassed > 1.5 ):
-                state.state = 0
+            # timePassed = time.process_time() - startTurn
+            # if(timePassed > 1.5 ):
+            #     state.state = 0
 
-            found, center = detector.search_post(image)
-            if found:
-                print("post at", center)
-                turn.p_term = center[1] - 570 # TODO -> Parameterize
-                delta_t = time.process_time() - last_t
-                turn.d_term = (turn.p_term - last_p_turn) // (last_t)
-                last_p_turn = turn.p_term
-                last_t = time.process_time()
-            else: 
-                pass
-                #TODO -> HOW TO HANDLE THIS
+            # found, center = detector.search_post(image)
+            # if found:
+            #     print("post at", center)
+            #     turn.p_term = center[1] - 570 # TODO -> Parameterize
+            #     delta_t = time.process_time() - last_t
+            #     turn.d_term = (turn.p_term - last_p_turn) // (last_t)
+            #     last_p_turn = turn.p_term
+            #     last_t = time.process_time()
+            # else: 
+            #     pass
+            #     #TODO -> HOW TO HANDLE THIS
         else:
             print("STATE ERROR")
 
@@ -158,44 +191,6 @@ def main(task_number):
         image = pygame.surfarray.make_surface(image)
         screen.blit(image, (0,0))
         pygame.display.update()
-        fwd = 0.0
-        turn = 0.0
-        for event in pygame.event.get():
-            if event.type==pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-                cv2.destroyAllWindows()
-        key_input = pygame.key.get_pressed()  
-        if key_input[pygame.K_LEFT]:
-            turn += 1.0
-        if key_input[pygame.K_UP]:
-            fwd +=1.0
-        if key_input[pygame.K_RIGHT]:
-            turn -= 1.0
-        if key_input[pygame.K_DOWN]:
-            fwd -= 1.0
-        if key_input[pygame.K_h]:
-            if flip_h == 0:
-                flip_h = 1
-            else:
-                flip_h = 0
-        if key_input[pygame.K_v]:
-            if flip_v == 0:
-                flip_v = 1
-            else:
-                flip_v = 0
-        if key_input[pygame.K_q]:
-                pygame.quit()
-                sys.exit()
-                cv2.destroyAllWindows()
-                
-        #command = mbot_motor_pwm_t()
-        #command.left_motor_pwm =  fwd * FWD_PWM_CMD - turn * TURN_PWM_CMD
-        #command.right_motor_pwm = fwd * FWD_PWM_CMD + turn * TURN_PWM_CMD
-        #lc.publish("MBOT_MOTOR_PWM",command.encode())
-        #lc.publish("STATE",state.encode())
-        #lc.publish("STEER_COMMAND",steer.encode())
-        #lc.publish("TURN_COMMAND",turn.encode())
         rawCapture.truncate(0)
 
 def state_handler(channel, data):
