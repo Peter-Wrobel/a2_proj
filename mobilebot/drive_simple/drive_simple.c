@@ -267,7 +267,7 @@ void pd_controller() {
 
 void stop_controller() {
 	watchdog_timer = 0.0;
-	float k = 25.0;
+	float k = 20.0;
 	float zero_w = (l_pwm + r_pwm) / 2.;
 	l_pwm = zero_w - k*v_goal*v_goal;
 	r_pwm = zero_w - k*v_goal*v_goal;
