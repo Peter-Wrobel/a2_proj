@@ -57,22 +57,25 @@ def main(task_number):
 
 
     # ===== Blue object tracker init ========
-    detector = btd.Tape_Detector()	
+    detector = btd.Tape_Detector(blue_thresh=5)	
     # ===== END red dot tracker init ========
 
     # ===== State Machine Init ==============
     state = rpi_state_t()
     state.state = 0
     steer = steer_command_t()
-    #turn = turn_command_t.turn_command_t()
+    turn = turn_command_t.turn_command_t()
     # ===== END State Machine Init ==========
 
     # ===== State Channel Subscription ======
     subscription = lc.subscribe("BBB_STATE", state_handler)
     # ===== END State Channel Subscription ==
-    last_p = 0
+    last_p_steer = 0
+    last_p_turn = 0
+    # start_turn = 0
     last_t = time.time()
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+        print("in state", state.state)
         if state.state == 1: #wait for state == 1
             lc.handle_timeout(15)
             global BBB_TURN_STATE
@@ -87,7 +90,7 @@ def main(task_number):
         # elif (flip_h == 1 & flip_v == 1):
         #     image = cv2.flip(image, -1)
         #show_pic(cv2.flip(image,0)) #horizontal
-        image = cv2.flip(image,1) # CHANGE ME! -1 = vertical flip
+        #image = cv2.flip(image,1) # CHANGE ME! -1 = vertical flip
         #show_pic(cv2.flip(image,-1))#both
         screen.fill([0,0,0])
 
@@ -109,8 +112,8 @@ def main(task_number):
                     steer.p_term = center[0] - (image.shape[1] // 2)
                     cur_t = time.time()
                     delta_t = (cur_t - last_t)
-                    steer.d_term = (steer.p_term - last_p) // (delta_t)
-                    last_p = steer.p_term
+                    steer.d_term = (steer.p_term - last_p_steer) // (delta_t)
+                    last_p_steer = steer.p_term
 
                     print("STEER COMMAND: p = " , steer.p_term, " d = ", steer.d_term, "delta_time = ", cur_t-last_t)
                     last_t = cur_t
@@ -129,6 +132,20 @@ def main(task_number):
             '''
             Still need to implement logic to determine when to stop turning and when to start continuing straight
             '''
+            timePassed = time.process_time() - startTurn
+            if(timePassed > 1.5 ):
+                state.state = 0
+
+            found, center = detector.search_post(image)
+            if found:
+                turn.p_term = center[0] - 570 # TODO -> Parameterize
+                delta_t = time.process_time() - last_t
+                turn.d_term = (turn.p_term - last_p_turn) // (last_t)
+                last_p_turn = turn.p_term
+                last_t = time.process_time()
+            else: 
+                pass
+                #TODO -> HOW TO HANDLE THIS
         else:
             print("STATE ERROR")
 

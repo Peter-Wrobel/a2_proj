@@ -81,6 +81,10 @@ void steer_command_handler(const lcm_recv_buf_t* rbuf,
                           const steer_command_t* msg,
                           void* user);
 
+void turn_command_handler(const lcm_recv_buf_t* rbuf,
+                          const char* channel,
+                          const turn_command_t* msg,
+                          void* user);
 
 void pd_controller();
 
@@ -144,7 +148,7 @@ int main(int argc, char *argv[]){
     printf("Running...\n");
     rpi_state_t_subscribe(lcm, "RPI_STATE", &state_handler, NULL);
     steer_command_t_subscribe(lcm, "STEER", &steer_command_handler, NULL);
-//    turn_command_t_subscribe(lcm, "TURN", &turn_command_handler, NULL);
+    turn_command_t_subscribe(lcm, "TURN", &turn_command_handler, NULL);
   
     while(rc_get_state()==RUNNING){
 //    for(int i = 0; i < 50; i++) {
@@ -176,7 +180,7 @@ int main(int argc, char *argv[]){
 		}
 	}
 	else if (mode == 2) {
-	//	turn_controller();
+		turn_controller();
 	}
 	rc_motor_set(2, l_pwm);
 	rc_motor_set(1, r_pwm);
@@ -229,6 +233,14 @@ void steer_command_handler(const lcm_recv_buf_t* rbuf,
 	d_w_term = msg->d_term;
 }
 
+void turn_command_handler(const lcm_recv_buf_t* rbuf,
+                           const char* channel,
+                           const turn_command_t* msg,
+                           void* user) {
+	watchdog_timer = 0.0;
+	p_w_term = msg->p_term;
+	d_w_term = msg->d_term;
+}
 
 void pd_controller() {
 	watchdog_timer = 0.0;
@@ -269,14 +281,24 @@ void stop_controller() {
 void turn_controller() {
 	watchdog_timer = 0.0;
 	float k_p = 0.5;
-	float k_d = 0.1;
-	float k_p_turn = 0.01;
-	float k_d_turn = 0.001;
+	float k_d = 0; // 0.1;
+	float k_p_w = 0.001;
+	float k_d_w = 0; //0.00001;
+    // printf("e: %f\n", p_v_term);
+    // printf("e_dot: %f\n\n", d_v_term);
 	l_pwm = l_pwm + k_p*p_v_term + k_d*d_v_term;
 	r_pwm = r_pwm + k_p*p_v_term + k_d*d_v_term;
 	
-	l_pwm = l_pwm + k_p*p_turn + k_d*d_turn;
-	l_pwm = l_pwm - k_p*p_turn - k_d*d_turn;
+	float zero_w = (l_pwm + r_pwm) / 2.;
+	l_pwm = zero_w + k_p_w*p_w_term + k_d_w*d_w_term;
+	r_pwm = zero_w - k_p_w*p_w_term - k_d_w*d_w_term;
+	//l_pwm = l_pwm + k_p_w*p_w_term + k_d_w*d_w_term;
+	//r_pwm = r_pwm - k_p_w*p_w_term - k_d_w*d_w_term;
+
+	if(l_pwm > .3) l_pwm = .3;
+	else if(l_pwm < -.3) l_pwm = -.3;
+	if(r_pwm > .3) r_pwm = .3;
+	else if(r_pwm < -.3) r_pwm = -.3;
 }
 
 /*******************************************************************************
