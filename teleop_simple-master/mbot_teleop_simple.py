@@ -21,7 +21,6 @@ sys.path.append("vision")
 from vision import orb_detector
 from orb_detector import ORBDetector
 
-
 BBB_TURN_STATE = False
 
 def show_pic(Ix):
@@ -29,8 +28,6 @@ def show_pic(Ix):
     plt.axis('off')
     plt.imshow(Ix)
     plt.show()
-
-
 
 def main(task_number):
     FWD_PWM_CMD = 0.3
@@ -64,20 +61,23 @@ def main(task_number):
     state = rpi_state_t()
     state.state = 0
     steer = steer_command_t()
-    #turn = turn_command_t.turn_command_t()
+    turn = turn_command_t.turn_command_t()
     # ===== END State Machine Init ==========
 
     # ===== State Channel Subscription ======
     subscription = lc.subscribe("BBB_STATE", state_handler)
     # ===== END State Channel Subscription ==
-    last_p = 0
+    last_p_steer = 0
+    last_p_turn = 0
     last_t = time.process_time()
+    startTurn = 0
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         if state.state == 1: #wait for state == 1
             lc.handle_timeout(15)
             global BBB_TURN_STATE
             if BBB_TURN_STATE == True:
                 state.state = 2 
+                startTurn = time.process_time()
 
         image = frame.array
         # if (flip_h == 1 & flip_v == 0):
@@ -96,20 +96,23 @@ def main(task_number):
             # ===== Blue line detection =====        
             found, center = detector.search_stopline(image)	
             if found:		
-                print("CENTER:", center)	
-                image = cv2.circle(image, center, 15, (0,255,0), -1)	
-                state.state = 1
-                lc.publish("RPI_STATE",state.encode())
+                found, center = detector.search_stopline(image)	
+                if found:
+                    print("CENTER:", center)	
+                    image = cv2.circle(image, center, 15, (0,255,0), -1)	
+                    state.state = 1
+                    lc.publish("RPI_STATE",state.encode())
             # ===== END Blue line detection ======
             
             # ===== Add red dot here ========
             if not found:
                 _, center = cross_detector.show_orb_features(image)
                 if center is not None:
-                    steer.p_term = center[1] - (image.shape[1] // 2)
+                    steer.p_term = center[0] - (image.shape[1] // 2)
                     delta_t = time.process_time() - last_t
                     steer.d_term = (steer.p_term - last_p) // (delta_t)
                     last_p = steer.p_term
+                    last_t = time.process_time()
 
                     print("STEER COMMAND: p = " , steer.p_term, " d = ", steer.d_term)
                     lc.publish("STEER",steer.encode())
@@ -124,9 +127,20 @@ def main(task_number):
             '''
         elif state.state == 2:
             BBB_TURN_STATE = False
-            '''
-            Still need to implement logic to determine when to stop turning and when to start continuing straight
-            '''
+            timePassed = time.process_time() - startTurn
+            if(timePassed > 1.5 ):
+                state.state = 0
+
+            found, center = detector.search_stopline(image)
+            if found is not None:
+                turn.p_term = center[0] - 570 # TODO -> Parameterize
+                delta_t = time.process_time() - last_t
+                turn.d_term = (turn.p_term - last_p_turn) // (last_t)
+                last_p_turn = turn.p_term
+                last_t = time.process_time()
+            else: 
+                pass
+                #TODO -> HOW TO HANDLE THIS
         else:
             print("STATE ERROR")
 
@@ -167,14 +181,7 @@ def main(task_number):
                 pygame.quit()
                 sys.exit()
                 cv2.destroyAllWindows()
-                
-        #command = mbot_motor_pwm_t()
-        #command.left_motor_pwm =  fwd * FWD_PWM_CMD - turn * TURN_PWM_CMD
-        #command.right_motor_pwm = fwd * FWD_PWM_CMD + turn * TURN_PWM_CMD
-        #lc.publish("MBOT_MOTOR_PWM",command.encode())
-        #lc.publish("STATE",state.encode())
-        #lc.publish("STEER_COMMAND",steer.encode())
-        #lc.publish("TURN_COMMAND",turn.encode())
+
         rawCapture.truncate(0)
 
 def state_handler(channel, data):
