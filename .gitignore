@@ -1,5 +1,5 @@
 *.o
 *.h
 *.hpp
-*.c
-
+*.pyc 
+teleop_simple-master/lcmtypes/*.c
