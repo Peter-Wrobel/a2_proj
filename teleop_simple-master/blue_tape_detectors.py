@@ -2,7 +2,6 @@ import cv2
 import time
 import numpy as np
 import sys
-import cv2
 import matplotlib.pyplot as plt
 
 
@@ -71,8 +70,14 @@ class Tape_Detector:
         """
         returns: bool if found, center of post
         """
-        img = image[:,:,2].copy()
-        np.less(img, self.thresh, out=img, dtype=np.uint8)
+        # cv2.imwrite("input_to_thresh.png", image[:,:,2])
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        low_hsv = (100, 0, 0)
+        high_hsv = (130, 255, 255)
+        img = cv2.inRange(hsv, low_hsv, high_hsv)
+        # cv2.imwrite("output_from_seg.png", img)
+        # img = image[:,:,2].copy()
+        # np.less(img, self.thresh, out=img, dtype=np.uint8)
         
         # interested search region must be tuned
         # range to search in -> activation = np.sum(image[260:400,180:460])

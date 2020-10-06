@@ -62,7 +62,7 @@ def main(task_number):
 
     # ===== State Machine Init ==============
     state = rpi_state_t()
-    state.state = 2
+    state.state = 0
     steer = steer_command_t()
     turn = turn_command_t()
     # ===== END State Machine Init ==========
@@ -130,8 +130,8 @@ def main(task_number):
         elif state.state == 2:
             # when firstly turn
             global turn_frame
-            turn_frame = 0
             if BBB_TURN_STATE:
+                turn_frame = 0
                 found, center = detector.search_post(image)
                 if found:
                     init_turn = center[0]
@@ -150,9 +150,10 @@ def main(task_number):
             
             # check whether cross exists after 1s
             # if turn_frame > 10:
-            _, center = cross_detector.show_orb_features(image)
-            if center:
-                state.state = 0
+            if turn_frame > 10:
+                _, center = cross_detector.show_orb_features(image)
+                if center is not None and (center[0] - (image.shape[1] // 2)) < 200 and (center[0] - (image.shape[1] // 2)) > -200:
+                    state.state = 0
 
             cur_t = time.time()
             delta_t = (cur_t - last_t)
