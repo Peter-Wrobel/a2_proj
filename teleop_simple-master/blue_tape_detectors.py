@@ -26,7 +26,7 @@ class Tape_Detector:
         np.less(img, self.thresh, out=img, dtype=np.uint8)
 
 
-        img = cv2.flip(img,0) #(dont) CHANGE ME! . If mbot_teleop_simple image already right up, this should be enough
+        #img = cv2.flip(img,0) #(dont) CHANGE ME! . If mbot_teleop_simple image already right up, this should be enough
         # self.show_pic(img)
 
 
@@ -62,7 +62,8 @@ class Tape_Detector:
                 if consecutive > 4:
                     col_val = ((col-3)*30 + 190)
                     row_val = (row*20 + 280)
-                    return True, (col_val, img.shape[0] -row_val) #CHANGE ME! Either original ans (col_val,row_val), or adjust with (shape len-{x})
+                    return True, (col_val, row_val)
+                # img.shape[0] -row_val) #CHANGE ME! Either original ans (col_val,row_val), or adjust with (shape len-{x})
             
 
         return False, None

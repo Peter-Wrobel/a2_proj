@@ -13,7 +13,7 @@ import lcm
 from lcmtypes.rpi_state_t import rpi_state_t
 from lcmtypes.bbb_state_t import bbb_state_t
 from lcmtypes.steer_command_t import steer_command_t
-from lcmtypes import turn_command_t
+from lcmtypes.turn_command_t import turn_command_t
 import blue_tape_detectors as btd
 import argparse
 
@@ -50,21 +50,21 @@ def main(task_number):
 
     # ===== Red dot tracker init ============
     cross_detector = ORBDetector(debug=False) 
-    cross_img = cv2.imread('cross_ugly.png') # CHANGE ME! - your local photo
+    cross_img = cv2.imread('cross_train.png') # CHANGE ME! - your local photo
     cross_detector.read_cross(cross_img)
     # ===== END red dot tracker init ========
 
 
 
     # ===== Blue object tracker init ========
-    detector = btd.Tape_Detector(blue_thresh=5)	
+    detector = btd.Tape_Detector(blue_thresh=10)	
     # ===== END red dot tracker init ========
 
     # ===== State Machine Init ==============
     state = rpi_state_t()
     state.state = 0
     steer = steer_command_t()
-    turn = turn_command_t.turn_command_t()
+    turn = turn_command_t()
     # ===== END State Machine Init ==========
 
     # ===== State Channel Subscription ======
@@ -72,7 +72,7 @@ def main(task_number):
     # ===== END State Channel Subscription ==
     last_p_steer = 0
     last_p_turn = 0
-    # start_turn = 0
+    start_turn = 0
     last_t = time.time()
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         print("in state", state.state)
@@ -81,6 +81,7 @@ def main(task_number):
             global BBB_TURN_STATE
             if BBB_TURN_STATE == True:
                 state.state = 2 
+                startTurn = time.process_time()
 
         image = frame.array
         # if (flip_h == 1 & flip_v == 0):
@@ -138,7 +139,8 @@ def main(task_number):
 
             found, center = detector.search_post(image)
             if found:
-                turn.p_term = center[0] - 570 # TODO -> Parameterize
+                print("post at", center)
+                turn.p_term = center[1] - 570 # TODO -> Parameterize
                 delta_t = time.process_time() - last_t
                 turn.d_term = (turn.p_term - last_p_turn) // (last_t)
                 last_p_turn = turn.p_term
