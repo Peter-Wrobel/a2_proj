@@ -64,7 +64,7 @@ def main(task_number):
     state = rpi_state_t()
     state.state = 0
     steer = steer_command_t()
-    #turn = turn_command_t.turn_command_t()
+    turn = turn_command_t()
     # ===== END State Machine Init ==========
 
     # ===== State Channel Subscription ======
@@ -72,6 +72,9 @@ def main(task_number):
     # ===== END State Channel Subscription ==
     last_p = 0
     last_t = time.time()
+
+	init_turn = 0
+	last_p_turn = 0
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         if state.state == 1: #wait for state == 1
             lc.handle_timeout(15)
@@ -109,7 +112,7 @@ def main(task_number):
                     steer.p_term = center[0] - (image.shape[1] // 2)
                     cur_t = time.time()
                     delta_t = (cur_t - last_t)
-                    steer.d_term = (steer.p_term - last_p) // (delta_t)
+                    steer.d_term = steer.p_term - last_p
                     last_p = steer.p_term
 
                     print("STEER COMMAND: p = " , steer.p_term, " d = ", steer.d_term, "delta_time = ", cur_t-last_t)
@@ -125,7 +128,40 @@ def main(task_number):
             Do we want to pass some kind of information to the stopping functionality?
             '''
         elif state.state == 2:
-            BBB_TURN_STATE = False
+			# when firstly turn
+			global turn_frame = 0
+			if BBB_TURN_STATE:
+				found, center = detector.search_post(image)
+				if found:
+					init_turn = center[0]
+					print("CENTER: ", center)
+            		BBB_TURN_STATE = False
+					turn.p_term = 0
+					turn.d_term = 0
+					last_p_turn = turn.p_term
+			else:
+				found, center = detector.search_post(image)
+				if found:
+					print("CENTER: ", center)
+					turn.p_term = center[0] - init_turn
+					turn.d_term = turn.p_term - last_p_turn
+					last_p_turn = turn.p_term
+			
+			# check whether cross exists after 1s
+			if turn_frame > 10:
+				found, center = cross_detector.show_orb_features(image)
+				if found:
+					state.state = 0
+
+			cur_t = time.time()
+			delta_t = (cur_t - last_t)
+			last_t = cur_t
+			print("TURN COMAND: p = ", turn.p_term, " d = ", turn.d_term)
+			lc.publish("TURN", turn.encode())
+			lc.publish("RPI_STATE",state.encode())
+			turn_frame += 1
+			
+					 
             '''
             Still need to implement logic to determine when to stop turning and when to start continuing straight
             '''

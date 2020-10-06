@@ -232,8 +232,8 @@ void pd_controller() {
 	watchdog_timer = 0.0;
 	float k_p = 0.5;
 	float k_d = 0.1;
-	float k_p_w = 0.000002;
-	float k_d_w = 0.000001;
+	float k_p_w = 0.000003;
+	float k_d_w = 0.0000002;
     // printf("e: %f\n", p_v_term);
     // printf("e_dot: %f\n\n", d_v_term);
 	l_pwm = l_pwm + mot_l_pol * (k_p*p_v_term + k_d*d_v_term);
@@ -245,7 +245,7 @@ void pd_controller() {
 
 void stop_controller() {
 	watchdog_timer = 0.0;
-	float k = 1.0;
+	float k = 100.0;
 	l_pwm = l_pwm - k*v_goal*v_goal;
 	r_pwm = r_pwm - k*v_goal*v_goal;
 }
