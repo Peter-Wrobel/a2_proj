@@ -81,6 +81,10 @@ void steer_command_handler(const lcm_recv_buf_t* rbuf,
                           const steer_command_t* msg,
                           void* user);
 
+void turn_command_handler(const lcm_recv_buf_t* rbuf,
+                          const char* channel,
+                          const turn_command_t* msg,
+                          void* user);
 
 void pd_controller();
 
@@ -144,7 +148,7 @@ int main(int argc, char *argv[]){
     printf("Running...\n");
     rpi_state_t_subscribe(lcm, "RPI_STATE", &state_handler, NULL);
     steer_command_t_subscribe(lcm, "STEER", &steer_command_handler, NULL);
-//    turn_command_t_subscribe(lcm, "TURN", &turn_command_handler, NULL);
+    turn_command_t_subscribe(lcm, "TURN", &turn_command_handler, NULL);
   
 //    while(rc_get_state()==RUNNING){
     for(int i = 0; i < 50; i++) {
@@ -227,6 +231,14 @@ void steer_command_handler(const lcm_recv_buf_t* rbuf,
 	d_w_term = msg->d_term;
 }
 
+void turn_command_handler(const lcm_recv_buf_t* rbuf,
+                          const char* channel,
+                          const turn_command_t* msg,
+                          void* user) {
+    watchdog_timer = 0.0;
+    p_turn = msg->p_term;
+    d_turn = msg->d_term;
+}
 
 void pd_controller() {
 	watchdog_timer = 0.0;
@@ -248,15 +260,17 @@ void stop_controller() {
 	float k = 100.0;
 	l_pwm = l_pwm - mot_l_pol * (k*v_goal*v_goal);
 	r_pwm = r_pwm - mot_r_pol * (k*v_goal*v_goal);
-    if (mot_l_pol == 1) {
-        l_pwm = max(0, l_pwm)
-    } else {
-        l_pwm = min(0, l_pwm)
+    if (mot_l_pol == 1 && l_pwm < 0) {
+        l_pwm = 0.0;
     }
-    if (mot_r_pol == 1) {
-        r_pwm = max(0, r_pwm)
-    } else {
-        r_pwm = min(0, r_pwm)
+    else if (mot_l_pol == -1 && l_pwm > 0) {
+        l_pwm = 0.0;
+    }
+    if (mot_r_pol == 1 && r_pwm < 0) {
+        r_pwm = 0.0;
+    }
+    else if (mot_r_pol == -1 && r_pwm > 0) {
+        r_pwm = 0.0;
     }
 }
 
@@ -265,12 +279,12 @@ void turn_controller() {
 	float k_p = 0.5;
 	float k_d = 0.1;
 	float k_p_turn = 0.00006;
-	float k_d_turn = 0.0015;
+    float k_d_turn = 0.0015;
 	l_pwm = l_pwm + mot_l_pol * (k_p*p_v_term + k_d*d_v_term);
 	r_pwm = r_pwm + mot_r_pol * (k_p*p_v_term + k_d*d_v_term);
 	
-	l_pwm = l_pwm - mot_l_pol * (k_p_turn*p_turn + k_d_turn*d_turn);
-	r_pwm = r_pwm + mot_r_pol * (k_p_turn*p_turn - k_d_turn*d_turn);
+	l_pwm = l_pwm + mot_l_pol * (k_p_turn*p_turn + k_d_turn*d_turn);
+	r_pwm = r_pwm - mot_r_pol * (k_p_turn*p_turn - k_d_turn*d_turn);
 }
 
 /*******************************************************************************
@@ -301,7 +315,7 @@ void publish_encoder_msg(){
 
     vel = (encoder_msg.left_delta+encoder_msg.right_delta)*(2*M_PI*0.042)/(2.0*20*78*t_passed);
     ang = (-encoder_msg.left_delta+encoder_msg.right_delta)*(2*M_PI*0.042)/(0.11*20*78*t_passed);
-    printf(" ENC: %lld | %lld  - v: %f | w: %f | e_target: %f | l-pwm: %f | r-pwm: %f - t_pass: %f\n", encoder_msg.leftticks, encoder_msg.rightticks, vel, ang, p_w_term, l_pwm, r_pwm, t_passed);
+    printf(" ENC: %lld | %lld  - v: %f | w: %f | e_target: %f | l-pwm: %f | r-pwm: %f - t_pass: %f\n", encoder_msg.leftticks, encoder_msg.rightticks, vel, ang, p_turn, l_pwm, r_pwm, t_passed);
 
     t_prev = encoder_msg.utime;
     left_prev = curr_left;
