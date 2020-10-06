@@ -164,33 +164,34 @@ int main(int argc, char *argv[]){
             rc_motor_set(2,0.0);
             printf("timeout...\r");
         }
-	// define a timeout (for erroring out) and the delay time
-	if (mode == 0) {
-        if (init_v == 1) {
-            rc_motor_set(1, 0.0);   
-            rc_motor_set(2, 0.0);
-            rc_nanosleep(1E9);
-            init_v = 0;
-        }
-		pd_controller();
-	}
-	else if (mode == 1) {
-		stop_controller();
-		if (vel < 0.0000001) {
-			mode = 2;
-			rpi_state_t data = {
-				.state = 2
-			};
-			bbb_state_t_publish(lcm, "BBB_STATE", &data);
+		// define a timeout (for erroring out) and the delay time
+		if (mode == 0) {
+        	if (init_v == 1) {
+            	stop_controller();
+				if (vel < 0.0000001) {
+            		init_v = 0;
+				}
+        	} else {
+				pd_controller();
+			}
 		}
-	}
-	else if (mode == 2) {
-		turn_controller();
-        init_v = 1;
-	}
-	rc_motor_set(1, l_pwm);
-	rc_motor_set(2, r_pwm);
-	lcm_handle_timeout(lcm, 1);
+		else if (mode == 1) {
+			stop_controller();
+			if (vel < 0.0000001) {
+				mode = 2;
+				rpi_state_t data = {
+					.state = 2
+				};
+				bbb_state_t_publish(lcm, "BBB_STATE", &data);
+			}
+		}
+		else if (mode == 2) {
+			turn_controller();
+        	init_v = 1;
+		}
+		rc_motor_set(1, l_pwm);
+		rc_motor_set(2, r_pwm);
+		lcm_handle_timeout(lcm, 1);
         publish_encoder_msg();
         rc_nanosleep(1E9 / 10); //handle at 10Hz
 		
