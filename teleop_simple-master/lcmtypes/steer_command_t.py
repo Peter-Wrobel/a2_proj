@@ -12,10 +12,6 @@ import struct
 class steer_command_t(object):
     __slots__ = ["p_term", "d_term"]
 
-    __typenames__ = ["float", "float"]
-
-    __dimensions__ = [None, None]
-
     def __init__(self):
         self.p_term = 0.0
         self.d_term = 0.0
@@ -49,7 +45,7 @@ class steer_command_t(object):
     def _get_hash_recursive(parents):
         if steer_command_t in parents: return 0
         tmphash = (0x5e8d3cf67c7e07f1) & 0xffffffffffffffff
-        tmphash  = (((tmphash<<1)&0xffffffffffffffff) + (tmphash>>63)) & 0xffffffffffffffff
+        tmphash  = (((tmphash<<1)&0xffffffffffffffff)  + (tmphash>>63)) & 0xffffffffffffffff
         return tmphash
     _get_hash_recursive = staticmethod(_get_hash_recursive)
     _packed_fingerprint = None

@@ -18,7 +18,6 @@
 #include "../lcmtypes/rpi_state_t.h"
 #include "../lcmtypes/bbb_state_t.h"
 #include "../lcmtypes/mbot_encoder_t.h"
-#include "../lcmtypes/simple_motor_command_t.h"
 
 #include <rc/start_stop.h>
 #include <rc/encoder_eqep.h>
@@ -71,11 +70,6 @@ int64_t t_prev = 0;
 int64_t t_prev_v = 0;
 int64_t left_prev = 0;
 int64_t right_prev = 0;
-
-void simple_motor_command_handler(const lcm_recv_buf_t* rbuf,
-                                  const char* channel,
-                                  const simple_motor_command_t* msg,
-                                  void* user);
 
 void state_handler(const lcm_recv_buf_t* rbuf,
                    const char* channel,
@@ -164,6 +158,7 @@ int main(int argc, char *argv[]){
 /*	if (i > 30) {
 		mode = 1;
 	}*/
+        printf("STATE: %d", mode);
         if(watchdog_timer >= 0.25)
         {
             rc_motor_set(1,0.0);
@@ -221,16 +216,6 @@ int main(int argc, char *argv[]){
 /// the sign of the velocity should indicate direction, and angular velocity 
 //  indicates turning rate. 
 //////////////////////////////////////////////////////////////////////////////
-
-void simple_motor_command_handler(const lcm_recv_buf_t* rbuf,
-                                  const char* channel,
-                                  const simple_motor_command_t* msg,
-                                  void* user) {
-    watchdog_timer = 0.0;
-    rc_motor_set(1, 0.15 * (msg->forward_velocity + msg->angular_velocity));
-    rc_motor_set(2, 0.15 * (msg->forward_velocity - msg->angular_velocity));
-}
-
 
 void state_handler(const lcm_recv_buf_t* rbuf,
                    const char* channel,

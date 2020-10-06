@@ -6,19 +6,15 @@
 
 #include <lcm/lcm_coretypes.h>
 
-#ifndef __simple_motor_command_t_hpp__
-#define __simple_motor_command_t_hpp__
+#ifndef __bbb_state_t_hpp__
+#define __bbb_state_t_hpp__
 
 
 
-class simple_motor_command_t
+class bbb_state_t
 {
     public:
-        int64_t    timestamp;
-
-        float      forward_velocity;
-
-        float      angular_velocity;
+        int8_t     state;
 
     public:
         /**
@@ -56,7 +52,7 @@ class simple_motor_command_t
         inline static int64_t getHash();
 
         /**
-         * Returns "simple_motor_command_t"
+         * Returns "bbb_state_t"
          */
         inline static const char* getTypeName();
 
@@ -67,7 +63,7 @@ class simple_motor_command_t
         inline static uint64_t _computeHash(const __lcm_hash_ptr *p);
 };
 
-int simple_motor_command_t::encode(void *buf, int offset, int maxlen) const
+int bbb_state_t::encode(void *buf, int offset, int maxlen) const
 {
     int pos = 0, tlen;
     int64_t hash = (int64_t)getHash();
@@ -81,7 +77,7 @@ int simple_motor_command_t::encode(void *buf, int offset, int maxlen) const
     return pos;
 }
 
-int simple_motor_command_t::decode(const void *buf, int offset, int maxlen)
+int bbb_state_t::decode(const void *buf, int offset, int maxlen)
 {
     int pos = 0, thislen;
 
@@ -96,66 +92,52 @@ int simple_motor_command_t::decode(const void *buf, int offset, int maxlen)
     return pos;
 }
 
-int simple_motor_command_t::getEncodedSize() const
+int bbb_state_t::getEncodedSize() const
 {
     return 8 + _getEncodedSizeNoHash();
 }
 
-int64_t simple_motor_command_t::getHash()
+int64_t bbb_state_t::getHash()
 {
     static int64_t hash = _computeHash(NULL);
     return hash;
 }
 
-const char* simple_motor_command_t::getTypeName()
+const char* bbb_state_t::getTypeName()
 {
-    return "simple_motor_command_t";
+    return "bbb_state_t";
 }
 
-int simple_motor_command_t::_encodeNoHash(void *buf, int offset, int maxlen) const
+int bbb_state_t::_encodeNoHash(void *buf, int offset, int maxlen) const
 {
     int pos = 0, tlen;
 
-    tlen = __int64_t_encode_array(buf, offset + pos, maxlen - pos, &this->timestamp, 1);
-    if(tlen < 0) return tlen; else pos += tlen;
-
-    tlen = __float_encode_array(buf, offset + pos, maxlen - pos, &this->forward_velocity, 1);
-    if(tlen < 0) return tlen; else pos += tlen;
-
-    tlen = __float_encode_array(buf, offset + pos, maxlen - pos, &this->angular_velocity, 1);
+    tlen = __int8_t_encode_array(buf, offset + pos, maxlen - pos, &this->state, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
     return pos;
 }
 
-int simple_motor_command_t::_decodeNoHash(const void *buf, int offset, int maxlen)
+int bbb_state_t::_decodeNoHash(const void *buf, int offset, int maxlen)
 {
     int pos = 0, tlen;
 
-    tlen = __int64_t_decode_array(buf, offset + pos, maxlen - pos, &this->timestamp, 1);
-    if(tlen < 0) return tlen; else pos += tlen;
-
-    tlen = __float_decode_array(buf, offset + pos, maxlen - pos, &this->forward_velocity, 1);
-    if(tlen < 0) return tlen; else pos += tlen;
-
-    tlen = __float_decode_array(buf, offset + pos, maxlen - pos, &this->angular_velocity, 1);
+    tlen = __int8_t_decode_array(buf, offset + pos, maxlen - pos, &this->state, 1);
     if(tlen < 0) return tlen; else pos += tlen;
 
     return pos;
 }
 
-int simple_motor_command_t::_getEncodedSizeNoHash() const
+int bbb_state_t::_getEncodedSizeNoHash() const
 {
     int enc_size = 0;
-    enc_size += __int64_t_encoded_array_size(NULL, 1);
-    enc_size += __float_encoded_array_size(NULL, 1);
-    enc_size += __float_encoded_array_size(NULL, 1);
+    enc_size += __int8_t_encoded_array_size(NULL, 1);
     return enc_size;
 }
 
-uint64_t simple_motor_command_t::_computeHash(const __lcm_hash_ptr *)
+uint64_t bbb_state_t::_computeHash(const __lcm_hash_ptr *)
 {
-    uint64_t hash = 0x395b957e90f950ffLL;
+    uint64_t hash = 0x4ca686a4dedda564LL;
     return (hash<<1) + ((hash>>63)&1);
 }
 

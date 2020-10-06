@@ -92,7 +92,7 @@ def main(task_number):
         screen.fill([0,0,0])
 
         if state.state == 0:
-            #start = time.process_time()	
+            #start = time.time()	
             # ===== Blue line detection =====        
             found, center = detector.search_stopline(image)	
             if found:		
@@ -109,16 +109,18 @@ def main(task_number):
                 _, center = cross_detector.show_orb_features(image)
                 if center is not None:
                     steer.p_term = center[0] - (image.shape[1] // 2)
-                    delta_t = time.process_time() - last_t
+                    cur_t = time.time()
+                    delta_t = (cur_t - last_t)
                     steer.d_term = (steer.p_term - last_p) // (delta_t)
                     last_p = steer.p_term
                     last_t = time.process_time()
 
-                    print("STEER COMMAND: p = " , steer.p_term, " d = ", steer.d_term)
+                    print("STEER COMMAND: p = " , steer.p_term, " d = ", steer.d_term, "delta_time = ", cur_t-last_t)
+                    last_t = cur_t
                     lc.publish("STEER",steer.encode())
                 lc.publish("RPI_STATE",state.encode())
             # ===== END add red dot =========
-            #print("time elapsed:", time.process_time() - start)
+            #print("time elapsed:", time.time() - start)
 
         elif state.state == 1:
             lc.publish("RPI_STATE",state.encode())
