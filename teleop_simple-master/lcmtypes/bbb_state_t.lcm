@@ -1,9 +1,0 @@
-struct bbb_state_t
-{
-    // state:
-	// 	0: move forward
-	// 	1: stop
-	// 	2: turn
-    int8_t state;
-}
-
