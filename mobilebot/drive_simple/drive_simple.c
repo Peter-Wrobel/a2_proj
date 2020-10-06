@@ -236,11 +236,11 @@ void pd_controller() {
 	float k_d_w = 0.0;
     // printf("e: %f\n", p_v_term);
     // printf("e_dot: %f\n\n", d_v_term);
-	l_pwm = l_pwm + k_p*p_v_term + k_d*d_v_term;
-	r_pwm = r_pwm + k_p*p_v_term + k_d*d_v_term;
+	l_pwm = l_pwm + mot_l_pol * (k_p*p_v_term + k_d*d_v_term);
+	r_pwm = r_pwm + mot_r_pol * (k_p*p_v_term + k_d*d_v_term);
 	
-	l_pwm = l_pwm + k_p_w*p_w_term + k_d_w*d_w_term;
-	r_pwm = r_pwm - k_p_w*p_w_term - k_d_w*d_w_term;
+	l_pwm = l_pwm + mot_l_pol * (k_p_w*p_w_term + k_d_w*d_w_term);
+	r_pwm = r_pwm - mot_r_pol * (k_p_w*p_w_term - k_d_w*d_w_term);
 }
 
 void stop_controller() {
