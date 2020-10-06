@@ -12,9 +12,7 @@ import lcm
 #from lcmtypes import mbot_motor_pwm_t
 from lcmtypes.rpi_state_t import rpi_state_t
 from lcmtypes.bbb_state_t import bbb_state_t
-<<<<<<< HEAD
 from lcmtypes.steer_command_t import steer_command_t
->>>>>>> 5c8935314226f8efa3554bd6b28bfa48d644c7d5
 from lcmtypes import turn_command_t
 import blue_tape_detectors as btd
 import argparse
@@ -65,16 +63,13 @@ def main(task_number):
     # ===== State Machine Init ==============
     state = rpi_state_t()
     state.state = 0
-<<<<<<< HEAD
     steer = steer_command_t()
->>>>>>> 5c8935314226f8efa3554bd6b28bfa48d644c7d5
     #turn = turn_command_t.turn_command_t()
     # ===== END State Machine Init ==========
 
     # ===== State Channel Subscription ======
     subscription = lc.subscribe("BBB_STATE", state_handler)
     # ===== END State Channel Subscription ==
-<<<<<<< HEAD
     last_p = 0
     last_t = time.process_time()
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
@@ -84,7 +79,6 @@ def main(task_number):
             if BBB_TURN_STATE == True:
                 state.state = 2 
 
->>>>>>> 5c8935314226f8efa3554bd6b28bfa48d644c7d5
         image = frame.array
         # if (flip_h == 1 & flip_v == 0):
         #     image = cv2.flip(image, 1)
@@ -95,8 +89,6 @@ def main(task_number):
         #show_pic(cv2.flip(image,0)) #horizontal
         image = cv2.flip(image,1) # CHANGE ME! -1 = vertical flip
         #show_pic(cv2.flip(image,-1))#both
-<<<<<<< HEAD
->>>>>>> 5c8935314226f8efa3554bd6b28bfa48d644c7d5
         screen.fill([0,0,0])
 
         if state.state == 0:
@@ -105,16 +97,13 @@ def main(task_number):
             found, center = detector.search_stopline(image)	
             if found:		
                 print("CENTER:", center)	
-<<<<<<< HEAD
                 image = cv2.circle(image, center, 15, (0,255,0), -1)	
->>>>>>> 5c8935314226f8efa3554bd6b28bfa48d644c7d5
                 state.state = 1
                 lc.publish("RPI_STATE",state.encode())
             # ===== END Blue line detection ======
             
             # ===== Add red dot here ========
             if not found:
-<<<<<<< HEAD
                 _, center = cross_detector.show_orb_features(image)
                 if center is not None:
                     steer.p_term = center[1] - (image.shape[1] // 2)
@@ -124,14 +113,12 @@ def main(task_number):
 
                     print("STEER COMMAND: p = " , steer.p_term, " d = ", steer.d_term)
                     lc.publish("STEER",steer.encode())
->>>>>>> 5c8935314226f8efa3554bd6b28bfa48d644c7d5
                 lc.publish("RPI_STATE",state.encode())
             # ===== END add red dot =========
             #print("time elapsed:", time.process_time() - start)
 
         elif state.state == 1:
             lc.publish("RPI_STATE",state.encode())
-<<<<<<< HEAD
             '''
             Do we want to pass some kind of information to the stopping functionality?
             '''
@@ -142,7 +129,6 @@ def main(task_number):
             '''
         else:
             print("STATE ERROR")
->>>>>>> 5c8935314226f8efa3554bd6b28bfa48d644c7d5
 
 
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -195,8 +181,6 @@ def state_handler(channel, data):
     msg = bbb_state_t().decode(data)
     print("Received message: ", msg.state, " on channel ", channel)
     if msg.state == 2:
-<<<<<<< HEAD
->>>>>>> 5c8935314226f8efa3554bd6b28bfa48d644c7d5
         global BBB_TURN_STATE
         BBB_TURN_STATE = True
 
