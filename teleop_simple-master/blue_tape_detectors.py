@@ -79,29 +79,30 @@ class Tape_Detector:
         # activation threshold needs tuning as well
         
         # performing convolution with a kernel that is diamond-shaped
-        activations = np.zeros((8,10))
-        for i, col in enumerate(range(460, 620, 20)):
+        col_step = 5
+        activations = np.zeros((8,160/col_step + 2))
+        for i, col in enumerate(range(460, 620, col_step)):
             # min = 0
             # max = 479
             for j, row in enumerate(range(220, 400, 30)):
-                print("row:", row,"\tcol:", col)
+                # print("row:", row,"\tcol:", col)
                 if img[row+10,col+10]+img[row+15,col+10]+img[row+20,col+10] >= 2:
                     # 2 of 3 points were blue
                     activations[j, i] = 1
         
         # if np.sum(activations) > 4:
-        print("ACTIVATIONS:\n", activations)
+        # print("ACTIVATIONS:\n", activations)
         for col in range(activations.shape[1]):
             consecutive = 0
             for row in range(activations.shape[0]):
                 if activations[row, col]:
                     # 2 of 3 points were blue
-                    print("counted:", row, "\t", col)
+                    # print("counted:", row, "\t", col)
                     consecutive += 1
                 else:
                     consecutive = 0
                 if consecutive > 4:
-                    return True, ((col+1)*20 + 460, (row-2)*30 + 220)
+                    return True, ((col+1)*col_step + 460, (row-2)*30 + 220)
             
 
         return False, None
