@@ -21,7 +21,6 @@ def euclidian_distance(point_a, point_b):
 
 
 
-
 class ORBTracker(Tracker):
   def __init__(self, keypoint, descriptor):
     super().__init__(keypoint.pt)
@@ -157,7 +156,7 @@ class ORBDetector:
 
 
         M_DIST_THRESH = 400
-        COMB_THRESH = 7
+        COMB_THRESH = 5
 
         # for k in kp:
         #   pt = (int(k.pt[0]), int(k.pt[1]))
@@ -189,15 +188,13 @@ class ORBDetector:
 
         cross_centers = self.merge_points(orb_centers)
 
+        returnCenter = None
         for x in cross_centers:
           if x[2]>COMB_THRESH:
             cv2.circle(image, (x[0]+VERT_LOW,x[1]+HOR_LOW), 5, [0,0,255], -1)
+            returnCenter =  (x[0]+VERT_LOW, x[1]+HOR_LOW)
 
-
-
-
-
-        return image
+        return (image, returnCenter)
 
 def show_pic(Ix):
   plt.figure()
@@ -263,3 +260,4 @@ if __name__ == "__main__":
     main(args["input_image"])
   else:
     detect_with_video(args['video'])
+

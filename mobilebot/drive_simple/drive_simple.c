@@ -15,7 +15,8 @@
 #include <lcm/lcm.h>
 #include "../lcmtypes/steer_command_t.h"
 #include "../lcmtypes/turn_command_t.h"
-#include "../lcmtypes/state_t.h"
+#include "../lcmtypes/rpi_state_t.h"
+#include "../lcmtypes/bbb_state_t.h"
 #include "../lcmtypes/mbot_encoder_t.h"
 #include "../lcmtypes/simple_motor_command_t.h"
 
@@ -78,12 +79,12 @@ void simple_motor_command_handler(const lcm_recv_buf_t* rbuf,
 
 void state_handler(const lcm_recv_buf_t* rbuf,
                    const char* channel,
-                   const state_t* msg,
+                   const rpi_state_t* msg,
                    void* user);
 
 void steer_command_handler(const lcm_recv_buf_t* rbuf,
                           const char* channel,
-                          const stop_command_t* msg,
+                          const steer_command_t* msg,
                           void* user);
 
 
@@ -143,45 +144,46 @@ int main(int argc, char *argv[]){
 
 	// done initializing so set state to RUNNING
     rc_encoder_eqep_init();
-	rc_set_state(RUNNING);
+    rc_set_state(RUNNING);
     
     watchdog_timer = 0.0;
     printf("Running...\n");
-	state_t_subscribe(lcm, "STATE", &state_handler, NULL);
-	steer_command_t_subscribe(lcm, "STEER", &steer_command_handler, NULL);
-	turn_command_t_subscribe(lcm, "TURN", &turn_command_handler, NULL);
-	// while(rc_get_state()==RUNNING){
-    for(int i = 0; i < 50; i++) {
+    rpi_state_t_subscribe(lcm, "RPI_STATE", &state_handler, NULL);
+    steer_command_t_subscribe(lcm, "STEER", &steer_command_handler, NULL);
+//    turn_command_t_subscribe(lcm, "TURN", &turn_command_handler, NULL);
+  
+    while(rc_get_state()==RUNNING){
+//    for(int i = 0; i < 50; i++) {
         watchdog_timer += 0.01;
-		if (i > 30) {
-			mode = 1;
-		}
+/*	if (i > 30) {
+		mode = 1;
+	}*/
         if(watchdog_timer >= 0.25)
         {
             rc_motor_set(1,0.0);
             rc_motor_set(2,0.0);
             printf("timeout...\r");
         }
-		// define a timeout (for erroring out) and the delay time
-		if (mode == 0) {
-			pd_controller();
+	// define a timeout (for erroring out) and the delay time
+	if (mode == 0) {
+		pd_controller();
+	}
+	else if (mode == 1) {
+		stop_controller();
+		if (vel < 0.0000001) {
+			mode = 2;
+			rpi_state_t data = {
+				.state = 2
+			};
+			bbb_state_t_publish(lcm, "BBB_STATE", &data);
 		}
-		else if (mode == 1) {
-			stop_controller();
-			if (vel < 0.0000001) {
-				mode = 2;
-				state_t data = {
-					.state = 2
-				};
-				state_t_publish(lcm, "STATE", &data);
-			}
-		}
-		else if (mode == 2) {
-			turn_controller();
-		}
-		rc_motor_set(1, l_pwm);
-		rc_motor_set(2, r_pwm);
-		lcm_handle_timeout(lcm, 1);
+	}
+	else if (mode == 2) {
+		turn_controller();
+	}
+	rc_motor_set(1, l_pwm);
+	rc_motor_set(2, r_pwm);
+	lcm_handle_timeout(lcm, 1);
         publish_encoder_msg();
         rc_nanosleep(1E9 / 10); //handle at 10Hz
 		
@@ -225,7 +227,7 @@ void simple_motor_command_handler(const lcm_recv_buf_t* rbuf,
 
 void state_handler(const lcm_recv_buf_t* rbuf,
                    const char* channel,
-                   const state_t* msg,
+                   const rpi_state_t* msg,
                    void* user) {
 	watchdog_timer = 0.0;
 	mode = msg->state;
@@ -233,7 +235,7 @@ void state_handler(const lcm_recv_buf_t* rbuf,
 
 void steer_command_handler(const lcm_recv_buf_t* rbuf,
                            const char* channel,
-                           const stop_command_t* msg,
+                           const steer_command_t* msg,
                            void* user) {
 	watchdog_timer = 0.0;
 	p_w_term = msg->p_term;
@@ -312,3 +314,4 @@ void publish_encoder_msg(){
 
     mbot_encoder_t_publish(lcm, MBOT_ENCODER_CHANNEL, &encoder_msg);
 }
+
