@@ -18,7 +18,7 @@ uint64_t __state_t_hash_recursive(const __lcm_hash_ptr *p)
 
     __lcm_hash_ptr cp;
     cp.parent =  p;
-    cp.v = (void*)__state_t_get_hash;
+    cp.v = __state_t_get_hash;
     (void) cp;
 
     uint64_t hash = (uint64_t)0x4ca686a4dedda564LL

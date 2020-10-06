@@ -148,12 +148,14 @@ int main(int argc, char *argv[]){
     
     watchdog_timer = 0.0;
     printf("Running...\n");
+<<<<<<< HEAD
     rpi_state_t_subscribe(lcm, "RPI_STATE", &state_handler, NULL);
     steer_command_t_subscribe(lcm, "STEER", &steer_command_handler, NULL);
 //    turn_command_t_subscribe(lcm, "TURN", &turn_command_handler, NULL);
   
     while(rc_get_state()==RUNNING){
 //    for(int i = 0; i < 50; i++) {
+>>>>>>> 5c8935314226f8efa3554bd6b28bfa48d644c7d5
         watchdog_timer += 0.01;
 /*	if (i > 30) {
 		mode = 1;
