@@ -166,6 +166,8 @@ int main(int argc, char *argv[]){
 	else if (mode == 1) {
 		stop_controller();
 		if (vel < 0.0000001) {
+			l_pwm = 0;
+			r_pwm = 0;
 			mode = 2;
 			rpi_state_t data = {
 				.state = 2
@@ -174,19 +176,19 @@ int main(int argc, char *argv[]){
 		}
 	}
 	else if (mode == 2) {
-		turn_controller();
+	//	turn_controller();
 	}
-	rc_motor_set(1, l_pwm);
-	rc_motor_set(2, r_pwm);
+	rc_motor_set(2, l_pwm);
+	rc_motor_set(1, r_pwm);
 	lcm_handle_timeout(lcm, 1);
-        publish_encoder_msg();
-        rc_nanosleep(1E9 / 10); //handle at 10Hz
+	publish_encoder_msg();
+	rc_nanosleep(1E9 / 10); //handle at 10Hz
 		
-		last_p_v_term = p_v_term;
-        float t = (float) (t_prev - t_prev_v) / 1E9;
-		p_v_term = v_goal - vel;
-		d_v_term = (p_v_term - last_p_v_term)/t;
-	}
+	last_p_v_term = p_v_term;
+	float t = (float) (t_prev - t_prev_v) / 1E9;
+	p_v_term = v_goal - vel;
+	d_v_term = (p_v_term - last_p_v_term)/t;
+    }
     rc_motor_cleanup();
     rc_encoder_eqep_cleanup();
     lcm_destroy(lcm);
@@ -231,23 +233,37 @@ void steer_command_handler(const lcm_recv_buf_t* rbuf,
 void pd_controller() {
 	watchdog_timer = 0.0;
 	float k_p = 0.5;
-	float k_d = 0.1;
-	float k_p_w = 0.01;
-	float k_d_w = 0.001;
+	float k_d = 0; // 0.1;
+	float k_p_w = 0.001;
+	float k_d_w = 0; //0.00001;
     // printf("e: %f\n", p_v_term);
     // printf("e_dot: %f\n\n", d_v_term);
 	l_pwm = l_pwm + k_p*p_v_term + k_d*d_v_term;
 	r_pwm = r_pwm + k_p*p_v_term + k_d*d_v_term;
 	
-	l_pwm = l_pwm + k_p_w*p_w_term + k_d_w*d_w_term;
-	r_pwm = r_pwm - k_p_w*p_w_term - k_d_w*d_w_term;
+	float zero_w = (l_pwm + r_pwm) / 2.;
+	l_pwm = zero_w + k_p_w*p_w_term + k_d_w*d_w_term;
+	r_pwm = zero_w - k_p_w*p_w_term - k_d_w*d_w_term;
+	//l_pwm = l_pwm + k_p_w*p_w_term + k_d_w*d_w_term;
+	//r_pwm = r_pwm - k_p_w*p_w_term - k_d_w*d_w_term;
+
+	if(l_pwm > .3) l_pwm = .3;
+	else if(l_pwm < -.3) l_pwm = -.3;
+	if(r_pwm > .3) r_pwm = .3;
+	else if(r_pwm < -.3) r_pwm = -.3;
 }
 
 void stop_controller() {
 	watchdog_timer = 0.0;
-	float k = 1.0;
-	l_pwm = l_pwm - k*v_goal*v_goal;
-	r_pwm = r_pwm - k*v_goal*v_goal;
+	float k = 25.0;
+	float zero_w = (l_pwm + r_pwm) / 2.;
+	l_pwm = zero_w - k*v_goal*v_goal;
+	r_pwm = zero_w - k*v_goal*v_goal;
+
+	if(l_pwm > .3) l_pwm = .3;
+	else if(l_pwm < -.3) l_pwm = -.3;
+	if(r_pwm > .3) r_pwm = .3;
+	else if(r_pwm < -.3) r_pwm = -.3;
 }
 
 void turn_controller() {
@@ -291,7 +307,7 @@ void publish_encoder_msg(){
 
     vel = (encoder_msg.left_delta+encoder_msg.right_delta)*(2*M_PI*0.042)/(2.0*20*78*t_passed);
     ang = (-encoder_msg.left_delta+encoder_msg.right_delta)*(2*M_PI*0.042)/(0.11*20*78*t_passed);
-    printf(" ENC: %lld | %lld  - v: %f | w: %f | p-term: %f | l-pwm: %f | - t_pass: %f | t: %lld\n", encoder_msg.leftticks, encoder_msg.rightticks, vel, ang, p_v_term, l_pwm, t_passed, encoder_msg.utime);
+    printf(" ENC: %lld | %lld  - v: %0.3f | w: %0.3f | p-term: %0.3f | l-pwm: %0.3f | r-pwm: %0.3f |- t_pass: %0.3f | t: %lld\n", encoder_msg.leftticks, encoder_msg.rightticks, vel, ang, p_w_term, l_pwm, r_pwm, t_passed, encoder_msg.utime);
 
     t_prev = encoder_msg.utime;
     left_prev = curr_left;
