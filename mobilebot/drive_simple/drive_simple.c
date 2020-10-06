@@ -246,21 +246,31 @@ void pd_controller() {
 void stop_controller() {
 	watchdog_timer = 0.0;
 	float k = 100.0;
-	l_pwm = l_pwm - k*v_goal*v_goal;
-	r_pwm = r_pwm - k*v_goal*v_goal;
+	l_pwm = l_pwm - mot_l_pol * (k*v_goal*v_goal);
+	r_pwm = r_pwm - mot_r_pol * (k*v_goal*v_goal);
+    if (mot_l_pol == 1) {
+        l_pwm = max(0, l_pwm)
+    } else {
+        l_pwm = min(0, l_pwm)
+    }
+    if (mot_r_pol == 1) {
+        r_pwm = max(0, r_pwm)
+    } else {
+        r_pwm = min(0, r_pwm)
+    }
 }
 
 void turn_controller() {
 	watchdog_timer = 0.0;
 	float k_p = 0.5;
 	float k_d = 0.1;
-	float k_p_turn = 0.01;
-	float k_d_turn = 0.001;
-	l_pwm = l_pwm + k_p*p_v_term + k_d*d_v_term;
-	r_pwm = r_pwm + k_p*p_v_term + k_d*d_v_term;
+	float k_p_turn = 0.00006;
+	float k_d_turn = 0.0015;
+	l_pwm = l_pwm + mot_l_pol * (k_p*p_v_term + k_d*d_v_term);
+	r_pwm = r_pwm + mot_r_pol * (k_p*p_v_term + k_d*d_v_term);
 	
-	l_pwm = l_pwm + k_p*p_turn + k_d*d_turn;
-	l_pwm = l_pwm - k_p*p_turn - k_d*d_turn;
+	l_pwm = l_pwm - mot_l_pol * (k_p_turn*p_turn + k_d_turn*d_turn);
+	r_pwm = r_pwm + mot_r_pol * (k_p_turn*p_turn - k_d_turn*d_turn);
 }
 
 /*******************************************************************************
