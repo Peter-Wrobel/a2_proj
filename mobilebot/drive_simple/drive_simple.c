@@ -48,6 +48,7 @@ int8_t mode = 0;
 // 2: turn
 
 // Task I: v control
+int8_t init_v = 1;
 float v_goal = 0.1;
 float last_p_v_term = 0;
 float p_v_term = 0;
@@ -150,8 +151,8 @@ int main(int argc, char *argv[]){
     steer_command_t_subscribe(lcm, "STEER", &steer_command_handler, NULL);
     turn_command_t_subscribe(lcm, "TURN", &turn_command_handler, NULL);
   
-//    while(rc_get_state()==RUNNING){
-    for(int i = 0; i < 50; i++) {
+    while(rc_get_state()==RUNNING){
+//    for(int i = 0; i < 50; i++) {
         watchdog_timer += 0.01;
 /*	if (i > 30) {
 		mode = 1;
@@ -165,6 +166,12 @@ int main(int argc, char *argv[]){
         }
 	// define a timeout (for erroring out) and the delay time
 	if (mode == 0) {
+        if (init_v == 1) {
+            rc_motor_set(1, 0.0);   
+            rc_motor_set(2, 0.0);
+            rc_nanosleep(1E9);
+            init_v = 0;
+        }
 		pd_controller();
 	}
 	else if (mode == 1) {
@@ -179,6 +186,7 @@ int main(int argc, char *argv[]){
 	}
 	else if (mode == 2) {
 		turn_controller();
+        init_v = 1;
 	}
 	rc_motor_set(1, l_pwm);
 	rc_motor_set(2, r_pwm);
